@@ -1,167 +1,91 @@
-app APMLVisualizerDocumentation:
+# APML Interactive Flow Visualiser
+# Real-time APML visualization with interactive mockups and beautiful flow diagrams
+
+app project_documentation:
   title: "APML Interactive Flow Visualiser"
-  description: "Real-time APML visualization with interactive mockups and beautiful flow diagrams"
+  description: "Transform APML specifications into interactive prototypes"
   version: "1.0.0"
   apml_specification_version: "0.9.0"
-  repository: "https://github.com/user/apml-visualiser"
-  demo_url: "https://user.github.io/apml-visualiser"
 
-data ProjectFeature:
-  icon: text required
-  title: text required  
-  description: text required
+# What this project does
+interface project_features:
+  show feature_list:
+    beautiful_ui:
+      description: "Tailwind CSS with gradients, animations, and dark themes"
+    interactive_mockups:
+      description: "Real-time mobile phone frame visualization"
+    live_diagrams:
+      description: "Dark-themed Mermaid flow diagrams with colored nodes"
+    automated_validation:
+      description: "Test all possible user paths mathematically"
+    change_requests:
+      description: "Add notes per screen for LLM iteration"
+    real_time_parsing:
+      description: "Instant APML compilation and visualization"
 
-data TechStack:
-  category: text required
-  technologies: list of text
+# How to use this project
+logic usage_instructions:
+  process local_development:
+    when developer wants to run locally:
+      run "npm install"
+      run "npm run dev"
+      open "http://localhost:5173"
 
-interface project_overview:
-  show hero_section:
-    title: "APML Interactive Flow Visualiser"
-    subtitle: "Transform APML specifications into beautiful, interactive prototypes"
-    badges:
-      deploy_badge:
-        text: "Deploy to GitHub Pages"
-        url: "https://github.com/user/apml-visualiser/actions"
-      version_badge:
-        text: "v1.0.0 Beta"
-        color: "green"
+  process deployment:
+    when ready to deploy:
+      push code to github
+      enable github_pages in repo settings
+      select "GitHub Actions" as source
+      wait for automatic deployment
 
-  show features_grid:
-    for each feature in ProjectFeature:
-      feature_card:
-        icon: feature.icon
-        title: feature.title
-        description: feature.description
+# Perfect dogfooding example
+interface project_philosophy:
+  show dogfooding_explanation:
+    title: "This README is written in APML!"
+    description: "We practice what we preach - if APML is good for apps, it's good for documentation"
+    benefits:
+      structured_information: "Clear, scannable project information"
+      intent_driven: "Shows what the project IS, not just how to use it"
+      future_proof: "Can be compiled to markdown, HTML, or any format"
 
-  show perfect_dogfooding:
-    title: "Perfect Dogfooding Example"
-    description: "This APMLVisualiser was specified in APML and compiled to Svelte"
-    proof_points:
-      - "Same APML specification generates identical functionality across frameworks"
-      - "APML → Framework compilation works for complex applications"  
-      - "Reverse-reverse compilation methodology is production-ready"
+# Technology stack
+data tech_stack:
+  frontend: "Svelte + Vite + Tailwind CSS"
+  visualization: "Mermaid.js with custom dark themes"
+  deployment: "GitHub Actions + GitHub Pages"
+  architecture: "APML → Svelte compilation pipeline"
 
-interface quick_start:
-  show development_section:
-    title: "Local Development"
-    commands:
-      install: "npm install"
-      dev: "npm run dev"
-      build: "npm run build"
-      preview: "npm run preview"
+# Example usage
+interface usage_example:
+  show sample_workflow:
+    step_1: "Paste your APML specification in the input panel"
+    step_2: "Click 'Parse & Visualize' to generate mockups"
+    step_3: "Interact with mobile mockup and flow diagrams"
+    step_4: "Add change requests for any screen improvements"
+    step_5: "Export enhanced APML with CR comments for LLM"
 
-  show deployment_section:
-    title: "GitHub Pages Deployment"
-    description: "Automatic deployment on push to main branch"
-    steps:
-      - "Push to GitHub repository"
-      - "Enable GitHub Pages in repo settings"
-      - "GitHub Actions auto-deploys on every push"
-      - "Get live URL at username.github.io/apml-visualiser"
-
-interface usage_guide:
-  show step_by_step:
-    title: "How to Use"
-    steps:
-      step_1:
-        title: "Paste APML Specification"
-        description: "Enter your complete APML spec in the input panel"
-      step_2:
-        title: "Parse & Visualize"
-        description: "Generate interactive mockups and flow diagrams instantly"
-      step_3:
-        title: "Interact & Test"
-        description: "Click through mockups, validate all possible paths"
-      step_4:
-        title: "Add Change Requests"
-        description: "Note improvements per screen for iterative development"
-      step_5:
-        title: "Export Enhanced APML"
-        description: "Download with CR comments for LLM collaboration"
-
+# Sample APML for testing
 interface example_apml:
-  show code_sample:
-    title: "Example APML Specification"
-    language: "apml"
-    code: """
-app SimpleToDoApp:
-  title: "Simple To-Do Application"
-  version: "1.0.0"
-  apml_specification_version: "0.9.0"
+  show simple_todo_app:
+    title: "Try this sample APML:"
+    sample_code: |
+      app SimpleToDoApp:
+        title: "Simple To-Do Application"
+        version: "1.0.0"
+        apml_specification_version: "0.9.0"
 
-data Task:
-  id: unique_id
-  title: text required
-  completed: boolean default false
+      data Task:
+        id: unique_id
+        title: text required
+        completed: boolean default false
 
-interface welcome_screen:
-  show welcome_panel:
-    title: "Welcome to Simple To-Do"
-    get_started_button:
-      text: "Get Started"
+      interface welcome_screen:
+        show welcome_panel:
+          title: "Welcome to Simple To-Do"
+          get_started_button:
+            text: "Get Started"
 
-logic navigation:
-  process start_app:
-    when user clicks get_started_button:
-      redirect to task_list
-"""
-
-interface tech_stack:
-  show technology_overview:
-    title: "Technology Stack"
-    for each stack in TechStack:
-      tech_category:
-        category: stack.category
-        items: stack.technologies
-
-interface apml_development_engine:
-  show ade_section:
-    title: "APML Development Engine (ADE)"
-    description: "This visualiser is part of the complete ADE toolkit"
-    capabilities:
-      - "Human-AI collaborative development"
-      - "Framework-agnostic compilation"
-      - "Mathematical validation of application logic"
-      - "Interactive prototyping and testing"
-
-interface visual_quality:
-  show quality_features:
-    title: "Professional Visual Quality"
-    features:
-      - "Gradient headers and backdrop blur effects"
-      - "Interactive hover states and smooth transitions"
-      - "Dark theme flow diagrams with colored nodes"
-      - "Responsive design and mobile-first approach"
-      - "Professional typography and spacing"
-
-logic documentation_generation:
-  process compile_to_markdown:
-    when documentation_needed:
-      extract interface_definitions from README.apml
-      generate markdown_sections from interfaces
-      create formatted_output with proper_headings
-      include code_samples and examples
-      output github_compatible_markdown
-
-  process compile_to_html:
-    when website_needed:
-      extract interface_definitions from README.apml
-      generate html_sections with styling
-      create interactive_navigation
-      include syntax_highlighting
-      output responsive_website
-
-data sample_features:
-  - icon: "🎨", title: "Beautiful UI", description: "Tailwind CSS with gradients, animations, and dark themes"
-  - icon: "📱", title: "Interactive Mobile Mockups", description: "Real-time phone frame visualization"
-  - icon: "🔄", title: "Live Mermaid Diagrams", description: "Dark-themed flow diagrams with colored nodes"
-  - icon: "✅", title: "Automated Validation", description: "Test all possible user paths mathematically"
-  - icon: "📝", title: "Change Request System", description: "Add notes per screen for LLM iteration"
-  - icon: "⚡", title: "Real-time Parsing", description: "Instant APML compilation and visualization"
-
-data sample_tech_stack:
-  - category: "Frontend", technologies: ["Svelte", "Vite", "Tailwind CSS"]
-  - category: "Visualization", technologies: ["Mermaid.js", "Custom Dark Themes"] 
-  - category: "Deployment", technologies: ["GitHub Actions", "GitHub Pages"]
-  - category: "Architecture", technologies: ["APML → Svelte Pipeline"]
+      logic navigation:
+        process start_app:
+          when user clicks get_started_button:
+            redirect to task_list
