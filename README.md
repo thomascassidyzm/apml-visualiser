@@ -2,7 +2,7 @@
 
 **Real-time APML visualization with interactive mockups and beautiful flow diagrams**
 
-[![Deploy on Railway](https://railway.app/button.svg)](https://railway.app/new/template?template=https://github.com/user/apml-visualiser)
+[![Deploy to GitHub Pages](https://img.shields.io/badge/Deploy-GitHub%20Pages-brightgreen.svg)](https://github.com/user/apml-visualiser/actions)
 
 ## 🚀 Features
 
@@ -41,10 +41,10 @@ npm run build
 npm run preview
 ```
 
-### Docker Deployment
+### GitHub Pages Deployment
 ```bash
-docker build -t apml-visualiser .
-docker run -p 80:80 apml-visualiser
+# Automatic deployment on push to main branch
+# Or manually trigger via GitHub Actions tab
 ```
 
 ## 📋 Usage
@@ -88,13 +88,13 @@ logic navigation:
       redirect to task_list
 ```
 
-## 🚀 Railway Deployment
+## 🚀 GitHub Pages Deployment
 
-This project includes Railway deployment configuration:
-- **Dockerfile** for containerized deployment
-- **nginx.conf** for production-ready serving
-- **railway.toml** for Railway-specific settings
-- **Health checks** and performance optimization
+This project includes GitHub Pages deployment:
+- **GitHub Actions** for automatic build and deploy
+- **Vite configuration** for correct base paths
+- **Zero maintenance** - just push to main branch
+- **Free hosting** with global CDN
 
 ## 🎨 Visual Quality
 
