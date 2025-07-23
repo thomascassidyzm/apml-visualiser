@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .phone-frame {
+    @apply relative bg-gradient-to-br from-gray-800 to-gray-900 rounded-[40px] p-5 shadow-2xl;
+    width: 375px;
+    height: 667px;
+  }
+  
+  .phone-screen {
+    @apply w-full h-full bg-white rounded-[20px] overflow-hidden relative shadow-inner;
+  }
+  
+  .flow-node {
+    @apply px-4 py-2 rounded-lg text-white font-medium text-sm cursor-pointer transition-all duration-200 hover:scale-105 hover:shadow-lg;
+  }
+  
+  .flow-node-team {
+    @apply bg-node-team;
+  }
+  
+  .flow-node-chat {
+    @apply bg-node-chat;
+  }
+  
+  .flow-node-task {
+    @apply bg-node-task;
+  }
+  
+  .flow-node-file {
+    @apply bg-node-file;
+  }
+  
+  .flow-connection {
+    @apply stroke-connection stroke-2;
+  }
+  
+  .flow-connection-active {
+    @apply stroke-flow-accent stroke-3 animate-flow-pulse;
+  }
+  
+  .mermaid-container {
+    @apply bg-flow-dark rounded-xl p-6 h-full overflow-auto;
+  }
+  
+  .form-panel {
+    @apply bg-white rounded-xl shadow-lg p-6 border border-gray-200;
+  }
+  
+  .btn-primary {
+    @apply bg-blue-600 hover:bg-blue-700 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md;
+  }
+  
+  .btn-secondary {
+    @apply bg-gray-100 hover:bg-gray-200 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors duration-200;
+  }
+  
+  .btn-accent {
+    @apply bg-orange-500 hover:bg-orange-600 text-white font-medium py-3 px-6 rounded-lg transition-colors duration-200 shadow-sm hover:shadow-md;
+  }
+  
+  .input-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200;
+  }
+  
+  .textarea-field {
+    @apply w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 resize-none;
+  }
+  
+  .tab-button {
+    @apply px-4 py-2 text-sm font-medium rounded-t-lg transition-colors duration-200;
+  }
+  
+  .tab-button-active {
+    @apply bg-blue-600 text-white;
+  }
+  
+  .tab-button-inactive {
+    @apply bg-gray-100 text-gray-600 hover:bg-gray-200;
+  }
+  
+  .scene-tab {
+    @apply px-4 py-2 text-sm font-medium rounded-lg transition-all duration-200;
+  }
+  
+  .scene-tab-active {
+    @apply bg-blue-600 text-white shadow-sm;
+  }
+  
+  .scene-tab-inactive {
+    @apply bg-gray-100 text-gray-700 hover:bg-gray-200;
+  }
+}

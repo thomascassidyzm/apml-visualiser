@@ -1,0 +1,23 @@
+{
+  "name": "apml-visualiser",
+  "version": "1.0.0",
+  "description": "APML Development Engine - Interactive Flow Visualiser",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@sveltejs/vite-plugin-svelte": "^3.0.0",
+    "@tailwindcss/postcss": "^4.1.11",
+    "autoprefixer": "^10.4.21",
+    "postcss": "^8.5.6",
+    "svelte": "^4.0.0",
+    "tailwindcss": "^4.1.11",
+    "vite": "^5.0.0"
+  },
+  "dependencies": {
+    "svelte-spa-router": "^4.0.0"
+  }
+}
