@@ -1,0 +1,355 @@
+# APML Development Engine (ADE) - LLM Reference Guide
+# For use by any LLM to generate APML specifications
+# Version: 2.0.0 | Updated: 2025-07-23
+# URL: https://apml.dev/llm-reference.txt
+
+## WHAT IS APML?
+
+Application Programming Markup Language (APML) is a declarative language for defining application intent. It captures the pure essence of what an application should do, not how it should be implemented. APML compiles to any frontend framework (React, Vue, Svelte, etc.) making it truly framework-agnostic.
+
+## CORE APML PHILOSOPHY
+
+1. **Intent over Implementation** - Describe WHAT the app does, not HOW
+2. **Framework Agnostic** - Same APML compiles to React, Vue, Svelte, etc.
+3. **Human Readable** - Designed for conversation between humans and AI
+4. **Trinity Principle** - Three core flows: App→User, User→App, App→App
+
+## APML SYNTAX SPECIFICATION v0.9.0
+
+### Basic App Structure
+```apml
+app AppName:
+  title: "Human Readable Title"
+  description: "Brief description of the app"
+  version: "1.0.0"
+  apml_specification_version: "0.9.0"
+```
+
+### Data Models
+```apml
+data ModelName:
+  field_name: type required
+  optional_field: type default value
+  id: unique_id
+  created_at: datetime
+  status: text default "active"
+```
+
+**Supported Types:**
+- `text` - String values
+- `number` - Numeric values
+- `boolean` - True/false
+- `datetime` - Date and time
+- `unique_id` - Auto-generated unique identifier
+- `array` - Array of items
+- `object` - Complex object
+
+### Interface Definitions (App→User)
+```apml
+interface screen_name:
+  show panel_name:
+    title: "Panel Title"
+    element_name:
+      text: "Button Text"
+      placeholder: "Input placeholder"
+      type: "password"
+    dynamic_content: ModelName[]
+```
+
+**Common Interface Elements:**
+- Buttons: `button_name: { text: "Click Me" }`
+- Inputs: `input_name: { placeholder: "Enter text" }`
+- Lists: `list_name: ModelName[]`
+- Text: `title: "Static text"`
+- Images: `image_name: { src: "url", alt: "description" }`
+
+### Logic Flows (User→App & App→App)
+```apml
+logic logic_group_name:
+  process process_name:
+    when user clicks button_name:
+      create new ModelName with field_data
+      redirect to target_screen
+      
+  process another_process:
+    when condition_met:
+      update existing_model
+      show success_message
+```
+
+**Common Logic Patterns:**
+- Navigation: `redirect to screen_name`
+- Data Creation: `create new ModelName with data`
+- Data Updates: `update existing_model`
+- Validation: `validate field_name`
+- API Calls: `fetch from endpoint`
+
+## ADE DEVELOPMENT WORKFLOW
+
+### Phase 1: LLM Generation (You Are Here)
+When a user describes an application idea:
+
+1. **Listen for Intent** - Extract core functionality
+2. **Generate APML** - Use syntax above
+3. **Validate Structure** - Ensure proper APML format
+4. **Export to ADE** - Provide complete APML spec
+
+### Phase 2: ADE Visualization
+User takes APML to https://ade.apml.dev where they:
+- See interactive mobile mockups
+- View flow diagrams
+- Test all user paths
+- Create change requests
+
+### Phase 3: Iteration Loop
+ADE sends change requests back to LLM for updates, then redeploys.
+
+## LLM GENERATION GUIDELINES
+
+### 1. Start with User Intent
+```
+User: "I want a simple todo app"
+
+Generate: Complete APML with interfaces for todo list, add todo, etc.
+```
+
+### 2. Include All Three Components
+Every APML should have:
+- `data` models for information storage
+- `interface` definitions for screens
+- `logic` flows for user interactions
+
+### 3. Use Descriptive Names
+```apml
+# Good
+interface welcome_screen:
+  show greeting_panel:
+    welcome_message: "Welcome to MyApp"
+
+# Avoid
+interface screen1:
+  show div1:
+    text1: "Hello"
+```
+
+### 4. Think Mobile-First
+Design interfaces as mobile screens:
+```apml
+interface task_list:
+  show main_panel:
+    header: "My Tasks"
+    task_items: Task[]
+    add_button:
+      text: "➕ Add Task"
+```
+
+### 5. Connect Screens with Logic
+Every button should have corresponding logic:
+```apml
+interface welcome_screen:
+  show welcome_panel:
+    get_started_button:
+      text: "Get Started"
+
+logic navigation:
+  process start_app:
+    when user clicks get_started_button:
+      redirect to main_dashboard
+```
+
+## COMMON APPLICATION PATTERNS
+
+### Authentication App
+```apml
+data User:
+  id: unique_id
+  email: text required
+  password: text required
+  created_at: datetime
+
+interface login_screen:
+  show login_form:
+    email_input:
+      placeholder: "Enter email"
+    password_input:
+      type: "password"
+    login_button:
+      text: "Sign In"
+
+logic authentication:
+  process user_login:
+    when user clicks login_button:
+      validate email_input and password_input
+      if valid:
+        create user_session
+        redirect to dashboard
+      else:
+        show error_message
+```
+
+### CRUD Application
+```apml
+data Item:
+  id: unique_id
+  name: text required
+  description: text
+  created_at: datetime
+
+interface item_list:
+  show list_panel:
+    title: "My Items"
+    items: Item[]
+    add_button:
+      text: "Add New Item"
+
+interface add_item:
+  show form_panel:
+    name_input:
+      placeholder: "Item name"
+    description_input:
+      placeholder: "Description"
+    save_button:
+      text: "Save Item"
+
+logic item_management:
+  process create_item:
+    when user clicks save_button:
+      create new Item with form_data
+      redirect to item_list
+```
+
+### Dashboard Application
+```apml
+interface dashboard:
+  show main_layout:
+    header:
+      title: "Dashboard"
+      user_menu: dynamic
+    
+    stats_section:
+      total_users: number
+      active_sessions: number
+      revenue: currency
+    
+    chart_section:
+      usage_chart: dynamic
+      performance_metrics: dynamic
+    
+    recent_activity:
+      activity_feed: Activity[]
+```
+
+## VALIDATION CHECKLIST
+
+Before providing APML to users, ensure:
+
+✅ **Complete Structure**
+- Has `app` declaration
+- Contains `data`, `interface`, and `logic` sections
+- Proper APML syntax throughout
+
+✅ **Logical Flow**
+- Every button has corresponding logic
+- Logic properly redirects between interfaces
+- Data models support the interface needs
+
+✅ **Mobile-Friendly Design**
+- Interfaces designed as mobile screens
+- Clear navigation patterns
+- Touch-friendly interactions
+
+✅ **Realistic Functionality**
+- App can actually be built from this spec
+- All referenced elements exist
+- Logic flows make sense
+
+## EXAMPLE PROMPTS TO HANDLE
+
+### Simple Request
+```
+User: "I need a basic contact form"
+
+Response: Generate APML with:
+- Contact data model (name, email, message)
+- Contact form interface
+- Form submission logic
+```
+
+### Complex Request
+```
+User: "Build me a social media app like Twitter"
+
+Response: Generate APML with:
+- User, Post, Like, Follow data models
+- Feed, Profile, Compose interfaces
+- Authentication, posting, social logic flows
+```
+
+### Feature Addition
+```
+User: "Add comments to my blog app"
+
+Response: 
+- Add Comment data model
+- Update post interface with comments
+- Add comment creation logic
+```
+
+## CHANGE REQUEST HANDLING
+
+When ADE sends change requests, format like:
+```
+# CHANGE REQUEST CR1 (HIGH)
+# Screen: login_screen
+# Type: ui_change
+# Request: Make the login button bigger and blue
+# Added: 7/23/2025
+
+interface login_screen:
+  show login_form:
+    login_button:
+      text: "Sign In"
+      style: "large blue button"
+```
+
+## OUTPUT FORMAT
+
+Always provide complete APML in code blocks:
+
+```apml
+app YourAppName:
+  title: "App Title"
+  description: "Brief description"
+  version: "1.0.0"
+  apml_specification_version: "0.9.0"
+
+# Complete APML specification here...
+```
+
+## INTEGRATION WITH ADE
+
+After generating APML, instruct users:
+
+"Copy this APML specification and paste it into the APML Development Engine at https://ade.apml.dev to see your app visualized, test it interactively, and deploy it to a live website."
+
+## SUCCESS METRICS
+
+A good APML generation should enable:
+- Visual mockup in ADE within seconds
+- Complete user flow testing
+- One-click deployment to live site
+- Easy iteration through change requests
+
+## REMEMBER
+
+- APML is about INTENT, not implementation
+- Every element should serve the user's goal
+- Keep it simple but complete
+- Design for mobile interaction
+- Enable the full ADE workflow
+
+---
+
+This reference enables any LLM to generate high-quality APML specifications that work seamlessly with the APML Development Engine ecosystem.
+
+For questions or updates: https://apml.dev/community
