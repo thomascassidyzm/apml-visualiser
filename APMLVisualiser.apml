@@ -1,0 +1,214 @@
+app APMLInteractiveFlowVisualiser:
+  title: "APML Interactive Flow Visualiser"
+  description: "Real-time APML visualization with interactive mockups and beautiful flow diagrams"
+  version: "1.0.0"
+  apml_specification_version: "0.9.0"
+
+data APMLSpecification:
+  rawContent: text required
+  parsedFlows: array
+  stateNodes: array
+  messageFlows: array
+  validationStatus: text default "parsing"
+  parseErrors: array
+
+data ChangeRequest:
+  id: unique_id
+  screenState: object required
+  userNote: text required
+  crType: text default "ui_change"
+  priority: text default "medium"
+  timestamp: datetime required
+
+interface apml_input_screen:
+  show input_panel:
+    title: "APML Input"
+    description: "Paste your APML specification below"
+    apml_textarea:
+      placeholder: "Paste your APML specification here..."
+      rows: 10
+    parse_button:
+      text: "Parse & Visualize"
+    sample_button:
+      text: "Load Sample"
+
+interface visualiser_dashboard:
+  show main_layout:
+    title: "APML Development Engine - Interactive Flow Visualiser"
+    
+    live_mobile_mockup:
+      title: "Live Mobile Mockup"
+      description: "Interactive prototype with touch simulation"
+      phone_frame:
+        current_screen_display: dynamic
+        reset_button: "Reset"
+        auto_run_button: "Auto-Run"
+    
+    interactive_flow_diagram:
+      title: "Interactive Flow Diagram"
+      description: "Real-time state visualization with clickable nodes"
+      mermaid_container: dynamic
+      export_svg_button: "Export SVG"
+      zoom_button: "Zoom"
+    
+    validation_testing_panel:
+      title: "Validation & Testing"
+      manual_testing_tab:
+        path_history: dynamic
+        available_actions: dynamic
+      automated_testing_tab:
+        run_all_paths_button: "Test All Possible Paths"
+        test_results: dynamic
+      change_requests_tab:
+        add_cr_button: "Add Change Request"
+        cr_list: dynamic
+        copy_apml_crs_button: "Copy APML + CRs for LLM"
+        download_apml_button: "Download APML File"
+
+interface change_request_dialog:
+  show cr_form:
+    title: "Add Change Request"
+    current_screen_label: dynamic
+    description_textarea:
+      placeholder: "Describe the change you'd like to make..."
+    type_select:
+      options: ["ui_change", "feature_request", "bug_fix", "performance"]
+    priority_select:
+      options: ["low", "medium", "high", "critical"]
+    save_button: "Save Change Request"
+    cancel_button: "Cancel"
+
+logic navigation:
+  process start_app:
+    when app loads:
+      redirect to apml_input_screen
+
+  process parse_apml:
+    when user clicks parse_button:
+      validate apml_textarea.content
+      if valid:
+        redirect to visualiser_dashboard
+      else:
+        show parse_errors
+
+  process load_sample:
+    when user clicks sample_button:
+      fill apml_textarea with sample_apml
+      redirect to visualiser_dashboard
+
+  process open_change_request:
+    when user clicks add_cr_button:
+      redirect to change_request_dialog
+
+  process save_change_request:
+    when user clicks save_button:
+      create new ChangeRequest
+      redirect to visualiser_dashboard
+
+  process cancel_change_request:
+    when user clicks cancel_button:
+      redirect to visualiser_dashboard
+
+  process export_apml_with_crs:
+    when user clicks copy_apml_crs_button:
+      generate apml_with_embedded_crs
+      copy to clipboard
+      show success_feedback
+
+  process reset_mockup:
+    when user clicks reset_button:
+      reset visualization_state
+      update current_screen_display
+
+  process auto_run_simulation:
+    when user clicks auto_run_button:
+      start automated_flow_simulation
+      update visualization continuously
+
+# 🔄 CHANGE REQUEST CR1 (HIGH)
+# Screen: visualiser_dashboard
+# Type: bug_fix
+# Request: Fix Mermaid nodes floating/collapsing when clicked - nodes should have fixed positioning
+# Added: 7/23/2025
+
+logic mermaid_interactions:
+  process handle_node_click:
+    when user clicks mermaid_node:
+      prevent node_repositioning
+      apply fixed_positioning
+      disable node_dragging
+      update current_node_state
+      highlight selected_node
+      update mobile_mockup_display
+
+  process handle_node_hover:
+    when user hovers mermaid_node:
+      show node_tooltip
+      apply hover_effects
+      maintain fixed_position
+
+logic validation_system:
+  process run_automated_tests:
+    when user clicks run_all_paths_button:
+      test all_possible_paths
+      generate validation_report
+      update test_results display
+
+  process manual_path_testing:
+    when user interacts with mockup:
+      record path_step
+      update path_history
+      update available_actions
+
+data sample_apml:
+  content: |
+    app SimpleToDoApp:
+      title: "Simple To-Do Application"
+      version: "1.0.0"
+      apml_specification_version: "0.9.0"
+
+    data Task:
+      id: unique_id
+      title: text required
+      completed: boolean default false
+
+    interface welcome_screen:
+      show welcome_panel:
+        title: "Welcome to Simple To-Do"
+        get_started_button:
+          text: "Get Started"
+
+    interface task_list:
+      show task_panel:
+        title: "My Tasks"
+        task_items: Task[]
+        add_task_button:
+          text: "Add New Task"
+
+    interface add_task:
+      show task_form:
+        title: "Add New Task"
+        task_input:
+          placeholder: "Enter task description"
+        save_button:
+          text: "Save Task"
+        cancel_button:
+          text: "Cancel"
+
+    logic navigation:
+      process start_app:
+        when user clicks get_started_button:
+          redirect to task_list
+
+      process add_new_task:
+        when user clicks add_task_button:
+          redirect to add_task
+
+      process save_task:
+        when user clicks save_button:
+          create new Task with task_input.value
+          redirect to task_list
+
+      process cancel_add:
+        when user clicks cancel_button:
+          redirect to task_list

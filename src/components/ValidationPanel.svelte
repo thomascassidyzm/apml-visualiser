@@ -1,5 +1,5 @@
 <script>
-  import { validationResults, changeRequests, visualizationState } from '../stores/apmlStore.js';
+  import { validationResults, changeRequests, visualizationState, apmlSpec } from '../stores/apmlStore.js';
   
   let activeTab = 'manual';
   let showCRDialog = false;
@@ -54,20 +54,80 @@
     const apmlWithCRs = generateAPMLWithChangeRequests($changeRequests);
     downloadFile('apml-with-change-requests.apml', apmlWithCRs);
   }
+
+  async function copyAPMLWithCRs() {
+    const apmlWithCRs = generateAPMLWithChangeRequests($changeRequests);
+    try {
+      await navigator.clipboard.writeText(apmlWithCRs);
+      // Show success feedback
+      const btn = document.querySelector('.copy-btn');
+      if (btn) {
+        const originalText = btn.textContent;
+        btn.textContent = '✓ Copied!';
+        btn.classList.add('bg-green-600');
+        setTimeout(() => {
+          btn.textContent = originalText;
+          btn.classList.remove('bg-green-600');
+        }, 2000);
+      }
+    } catch (err) {
+      console.error('Failed to copy to clipboard:', err);
+      // Fallback to download
+      exportAPMLWithCRs();
+    }
+  }
   
   function generateAPMLWithChangeRequests(crs) {
-    let apmlContent = `# APML with Change Requests\n# Generated: ${new Date().toISOString()}\n\n`;
+    // Get the original APML content
+    const originalAPML = $apmlSpec.rawContent || '';
     
-    crs.forEach(cr => {
-      apmlContent += `# CHANGE REQUEST ${cr.id}\n`;
-      apmlContent += `# Screen: ${cr.screenState.interfaceName}\n`;
-      apmlContent += `# Type: ${cr.crType}\n`;
-      apmlContent += `# Priority: ${cr.priority}\n`;
-      apmlContent += `# Note: ${cr.userNote}\n`;
-      apmlContent += `# Timestamp: ${cr.timestamp}\n\n`;
+    if (!originalAPML) {
+      return `# No APML content found to export with change requests\n# Please parse an APML specification first.`;
+    }
+    
+    // Create header with change request summary
+    let apmlWithCRs = `# APML with Change Requests\n`;
+    apmlWithCRs += `# Generated: ${new Date().toISOString()}\n`;
+    apmlWithCRs += `# Total Change Requests: ${crs.length}\n\n`;
+    
+    if (crs.length > 0) {
+      apmlWithCRs += `# CHANGE REQUEST SUMMARY:\n`;
+      crs.forEach((cr, index) => {
+        apmlWithCRs += `# CR${index + 1}: ${cr.screenState.interfaceName} - ${cr.crType} (${cr.priority})\n`;
+        apmlWithCRs += `#      "${cr.userNote}"\n`;
+      });
+      apmlWithCRs += `\n# =====================================\n`;
+      apmlWithCRs += `# ORIGINAL APML WITH EMBEDDED COMMENTS\n`;
+      apmlWithCRs += `# =====================================\n\n`;
+    }
+    
+    // Embed change requests as comments within the relevant interface sections
+    let modifiedAPML = originalAPML;
+    
+    crs.forEach((cr, index) => {
+      const interfaceName = cr.screenState.interfaceName;
+      const interfaceRegex = new RegExp(`(interface\\s+${interfaceName}:)`, 'g');
+      
+      const changeComment = `\n# 🔄 CHANGE REQUEST CR${index + 1} (${cr.priority.toUpperCase()})\n` +
+        `# Screen: ${interfaceName}\n` +
+        `# Type: ${cr.crType}\n` +
+        `# Request: ${cr.userNote}\n` +
+        `# Added: ${new Date(cr.timestamp).toLocaleDateString()}\n`;
+      
+      modifiedAPML = modifiedAPML.replace(interfaceRegex, `$1${changeComment}`);
     });
     
-    return apmlContent;
+    apmlWithCRs += modifiedAPML;
+    
+    // Add footer with instructions
+    apmlWithCRs += `\n\n# =====================================\n`;
+    apmlWithCRs += `# INSTRUCTIONS FOR LLM ITERATION\n`;
+    apmlWithCRs += `# =====================================\n`;
+    apmlWithCRs += `# Please review the ${crs.length} change request(s) above and update the APML accordingly.\n`;
+    apmlWithCRs += `# Focus on the specific screens and requirements mentioned in each CR comment.\n`;
+    apmlWithCRs += `# Remove the CR comments after implementing the changes.\n`;
+    
+    return apmlWithCRs;
   }
   
   function downloadFile(filename, content) {
@@ -219,12 +279,26 @@
             {/each}
           </div>
           
-          <button 
-            on:click={exportAPMLWithCRs}
-            class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors"
-          >
-            Export APML with CRs
-          </button>
+          <div class="space-y-2">
+            <button 
+              on:click={copyAPMLWithCRs}
+              class="copy-btn w-full px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z"/>
+              </svg>
+              <span>Copy APML + CRs for LLM</span>
+            </button>
+            <button 
+              on:click={exportAPMLWithCRs}
+              class="w-full px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2"
+            >
+              <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3M3 17V7a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z"/>
+              </svg>
+              <span>Download APML File</span>
+            </button>
+          </div>
         {:else}
           <p class="text-sm text-gray-500 text-center py-8">
             No change requests yet

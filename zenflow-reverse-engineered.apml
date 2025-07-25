@@ -1,0 +1,399 @@
+app Zenflow:
+  title: "Zenflow - Project Management Reimagined"
+  description: "Beautiful project management with glass morphism and modern UX"
+  version: "2.0.0"
+  apml_specification_version: "0.9.0"
+  
+  theme:
+    primary_gradient: "linear-gradient(135deg, #667eea 0%, #764ba2 25%, #f093fb 50%, #f5576c 75%, #4facfe 100%)"
+    glass_morphism: true
+    animation_style: "cubic-bezier(0.16, 1, 0.3, 1)"
+    device_frame: "iphone_12"
+    dimensions: "390x844"
+
+data Project:
+  id: unique_id
+  title: text required
+  subtitle: text
+  icon: emoji
+  progress: percentage
+  task_count: integer
+  team_size: integer
+  days_remaining: integer
+  team_avatars: array<text>
+  priority: enum["high", "medium", "low"]
+  created_at: timestamp auto
+
+data Task:
+  id: unique_id
+  project_id: foreign_key<Project>
+  title: text required
+  completed: boolean default false
+  priority: enum["high", "medium", "low"]
+  assignee: text
+  created_at: timestamp auto
+
+data User:
+  id: unique_id
+  name: text required
+  avatar: text
+  role: text
+
+interface dashboard:
+  layout: "mobile_app"
+  animation: "fade_in_up"
+  
+  show status_bar:
+    time: dynamic_time
+    icons: ["signal", "wifi", "battery"]
+    style: "glass_dark"
+    
+  show app_header:
+    title: "Zenflow"
+    style: "glass_morphism"
+    gradient_text: true
+    actions:
+      search_button:
+        icon: "🔍"
+        style: "glass_button"
+      profile_button:
+        icon: "👤"
+        style: "glass_button"
+        
+  show main_content:
+    scroll: "vertical"
+    padding: "20px 24px"
+    
+    projects_grid:
+      layout: "vertical_stack"
+      gap: "16px"
+      animation: "staggered_fade_in"
+      
+      for each project in Project:
+        project_card:
+          style: "glass_morphism_card"
+          hover_effect: "lift_and_scale"
+          animation_delay: "${index * 0.1}s"
+          border_radius: "24px"
+          
+          project_icon:
+            emoji: project.icon
+            style: "glass_icon_container"
+            size: "48px"
+            
+          project_title:
+            text: project.title
+            style: "gradient_text_large"
+            
+          project_subtitle:
+            text: project.subtitle
+            style: "translucent_text"
+            
+          project_stats:
+            layout: "horizontal_flex"
+            gap: "20px"
+            
+            stat_tasks:
+              number: project.task_count
+              label: "Tasks"
+              style: "centered_stat"
+              
+            stat_team:
+              number: project.team_size
+              label: "Team"
+              style: "centered_stat"
+              
+            stat_days:
+              number: project.days_remaining
+              label: "Days"
+              style: "centered_stat"
+              
+          progress_bar:
+            value: project.progress
+            style: "glass_progress_bar"
+            animation: "smooth_fill"
+            
+          team_avatars:
+            layout: "overlapping_horizontal"
+            for each avatar in project.team_avatars:
+              avatar_circle:
+                text: avatar
+                style: "glass_avatar"
+                border: "glass_border"
+                
+  show floating_action_button:
+    position: "bottom_right"
+    icon: "+"
+    style: "glass_fab"
+    animation: "float"
+    action: "create_project"
+    
+  show bottom_navigation:
+    style: "glass_bottom_nav"
+    items:
+      home_nav:
+        icon: "🏠"
+        label: "Home"
+        active: true
+      tasks_nav:
+        icon: "✓"
+        label: "Tasks"
+      analytics_nav:
+        icon: "📊"
+        label: "Analytics"
+      team_nav:
+        icon: "👥"
+        label: "Team"
+
+interface project_detail:
+  layout: "mobile_app"
+  animation: "slide_in_right"
+  
+  show status_bar:
+    time: dynamic_time
+    icons: ["signal", "wifi", "battery"]
+    style: "glass_dark"
+    
+  show app_header:
+    style: "glass_morphism"
+    
+    back_button:
+      icon: "←"
+      style: "glass_button"
+      action: "go_back"
+      
+    project_info:
+      title: current_project.title
+      subtitle: "${current_project.task_count} tasks • ${current_project.progress}% complete"
+      style: "gradient_text"
+      
+  show main_content:
+    scroll: "vertical"
+    padding: "20px 24px"
+    
+    task_sections:
+      layout: "vertical_stack"
+      gap: "20px"
+      animation: "staggered_slide_in"
+      
+      high_priority_section:
+        style: "glass_section"
+        animation_delay: "0.1s"
+        
+        section_header:
+          icon: "🔥"
+          title: "High Priority"
+          badge:
+            text: "Urgent"
+            style: "priority_high_badge"
+            
+        subtasks:
+          layout: "vertical_stack"
+          gap: "12px"
+          
+          for each task in high_priority_tasks:
+            subtask_item:
+              style: "glass_subtask"
+              hover_effect: "highlight"
+              
+              checkbox:
+                checked: task.completed
+                style: "glass_checkbox"
+                animation: "scale_on_check"
+                
+              task_text:
+                text: task.title
+                style: task.completed ? "completed_text" : "normal_text"
+                
+      in_progress_section:
+        style: "glass_section"
+        animation_delay: "0.2s"
+        
+        section_header:
+          icon: "⚡"
+          title: "In Progress"
+          badge:
+            text: "Active"
+            style: "priority_medium_badge"
+            
+        subtasks:
+          layout: "vertical_stack"
+          gap: "12px"
+          
+          for each task in in_progress_tasks:
+            subtask_item:
+              style: "glass_subtask"
+              hover_effect: "highlight"
+              
+              checkbox:
+                checked: task.completed
+                style: "glass_checkbox"
+                
+              task_text:
+                text: task.title
+                style: task.completed ? "completed_text" : "normal_text"
+                
+      team_activity_section:
+        style: "glass_section"
+        animation_delay: "0.3s"
+        
+        section_header:
+          icon: "👥"
+          title: "Team Activity"
+          
+        activity_items:
+          layout: "vertical_stack"
+          gap: "12px"
+          
+          for each activity in recent_activities:
+            activity_item:
+              style: "glass_subtask"
+              
+              user_avatar:
+                text: activity.user.avatar
+                style: "glass_avatar"
+                
+              activity_text:
+                text: activity.description
+                style: "normal_text"
+
+logic navigation:
+  process show_dashboard:
+    when user clicks home_nav:
+      redirect to dashboard
+      animation: "slide_left"
+      
+  process show_project_detail:
+    when user clicks project_card:
+      set current_project to clicked_project
+      redirect to project_detail
+      animation: "slide_right"
+      
+  process go_back_to_dashboard:
+    when user clicks back_button:
+      redirect to dashboard
+      animation: "slide_left"
+      
+  process show_create_project:
+    when user clicks floating_action_button:
+      show modal: "create_project_modal"
+      animation: "scale_up"
+
+logic task_management:
+  process toggle_task_completion:
+    when user clicks checkbox:
+      toggle task.completed
+      if task.completed:
+        animate task_text with "strikethrough"
+        animate checkbox with "check_mark"
+      else:
+        animate task_text with "remove_strikethrough"
+        animate checkbox with "uncheck"
+      update project.progress
+      refresh progress_bar with "smooth_animation"
+
+logic interactions:
+  process search_projects:
+    when user clicks search_button:
+      show overlay: "search_modal"
+      animation: "fade_in_scale"
+      
+  process show_user_profile:
+    when user clicks profile_button:
+      redirect to user_profile
+      animation: "slide_down"
+      
+  process ripple_effect:
+    when user touches any button:
+      animate with "ripple_expand"
+      duration: "300ms"
+      easing: "ease_out"
+
+styles glass_morphism:
+  background: "rgba(255, 255, 255, 0.15)"
+  backdrop_filter: "blur(20px)"
+  border: "1px solid rgba(255, 255, 255, 0.2)"
+  box_shadow: "0 8px 32px rgba(0, 0, 0, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.2)"
+  
+styles glass_morphism_card:
+  extends: glass_morphism
+  border_radius: "24px"
+  padding: "24px"
+  hover_transform: "translateY(-8px) scale(1.02)"
+  hover_shadow: "0 20px 40px rgba(0, 0, 0, 0.1)"
+  transition: "all 0.4s cubic-bezier(0.16, 1, 0.3, 1)"
+  
+styles glass_button:
+  extends: glass_morphism
+  width: "40px"
+  height: "40px"
+  border_radius: "20px"
+  color: "white"
+  hover_transform: "translateY(-2px) scale(1.05)"
+  hover_background: "rgba(255, 255, 255, 0.25)"
+  active_transform: "translateY(0) scale(0.95)"
+  
+styles gradient_text_large:
+  font_size: "20px"
+  font_weight: "700"
+  background: "linear-gradient(135deg, #fff 0%, rgba(255,255,255,0.8) 100%)"
+  background_clip: "text"
+  text_fill_color: "transparent"
+  text_shadow: "0 1px 3px rgba(0, 0, 0, 0.1)"
+  
+styles glass_progress_bar:
+  width: "100%"
+  height: "6px"
+  background: "rgba(0, 0, 0, 0.1)"
+  border_radius: "3px"
+  
+  fill:
+    background: "linear-gradient(90deg, rgba(255, 255, 255, 0.8), rgba(255, 255, 255, 0.6))"
+    border_radius: "3px"
+    box_shadow: "0 0 8px rgba(255, 255, 255, 0.3)"
+    transition: "width 0.6s cubic-bezier(0.16, 1, 0.3, 1)"
+
+animations:
+  fade_in_up:
+    from:
+      opacity: 0
+      transform: "translateY(30px)"
+    to:
+      opacity: 1
+      transform: "translateY(0)"
+    duration: "0.6s"
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)"
+    
+  staggered_fade_in:
+    animation: fade_in_up
+    stagger_delay: "0.1s"
+    
+  slide_in_right:
+    from:
+      opacity: 0
+      transform: "translateX(30px)"
+    to:
+      opacity: 1
+      transform: "translateX(0)"
+    duration: "0.6s"
+    easing: "cubic-bezier(0.16, 1, 0.3, 1)"
+    
+  float:
+    keyframes:
+      0%, 100%: "translateY(0px)"
+      50%: "translateY(-10px)"
+    duration: "3s"
+    easing: "ease-in-out"
+    iteration: "infinite"
+    
+  ripple_expand:
+    from:
+      width: 0
+      height: 0
+      opacity: 0.3
+    to:
+      width: "300px"
+      height: "300px"
+      opacity: 0
+    duration: "300ms"
+    easing: "ease-out"

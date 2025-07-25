@@ -1,13 +1,19 @@
 <script>
   import Router from 'svelte-spa-router';
-  import APMLInput from './components/APMLInput.svelte';
+  import APMLInputScreen from './components/APMLInputScreen.svelte';
   import VisualiserDashboard from './components/VisualiserDashboard.svelte';
+  import { onMount } from 'svelte';
+  import { push } from 'svelte-spa-router';
+  import { apmlStore } from './stores/apmlStore.js';
   import './app.css';
 
   const routes = {
-    '/': APMLInput,
+    '/': APMLInputScreen,
     '/dashboard': VisualiserDashboard
   };
+
+  // Note: Auto-loading is disabled to show APML input screen first
+  // Users can now paste sophisticated APML via the input screen
 </script>
 
 <main class="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
@@ -45,7 +51,7 @@
   </header>
 
   <!-- Main Content -->
-  <div class="max-w-7xl mx-auto px-6">
+  <div class="w-full">
     <Router {routes} />
   </div>
 </main>

@@ -124,9 +124,24 @@ function extractDataModels(content) {
   let match;
   
   while ((match = dataRegex.exec(content)) !== null) {
+    const modelName = match[1];
+    const definition = match[2].trim();
+    
+    // Parse fields from definition
+    const fields = {};
+    const fieldLines = definition.split('\n').map(line => line.trim()).filter(line => line);
+    
+    for (const line of fieldLines) {
+      if (line.includes(':')) {
+        const [fieldName, fieldType] = line.split(':').map(s => s.trim());
+        fields[fieldName] = fieldType;
+      }
+    }
+    
     models.push({
-      name: match[1],
-      definition: match[2].trim()
+      name: modelName,
+      definition: definition.trim(),
+      fields: fields
     });
   }
   
@@ -138,14 +153,56 @@ function extractLogicFlows(content) {
   const logicRegex = /logic\s+(\w+):(.*?)(?=logic\s+\w+:|interface\s+\w+:|data\s+\w+:|$)/gs;
   let match;
   
+  console.log('🔍 Extracting logic flows from APML...');
+  
   while ((match = logicRegex.exec(content)) !== null) {
-    flows.push({
-      name: match[1],
-      definition: match[2].trim()
-    });
+    const logicName = match[1];
+    const logicContent = match[2].trim();
+    
+    console.log(`📋 Found logic block: ${logicName}`, logicContent);
+    
+    // Parse individual processes within this logic block - handle both button names and action names
+    const processRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+(?:_button)?):\s*redirect\s+to\s+(\w+)/g;
+    let processMatch;
+    
+    while ((processMatch = processRegex.exec(logicContent)) !== null) {
+      const buttonName = processMatch[2];
+      // Convert button name to action (remove _button suffix)
+      const actionName = buttonName.replace('_button', '');
+      
+      console.log(`🔗 Found process: ${processMatch[1]}, button: ${buttonName}, action: ${actionName}, redirect: ${processMatch[3]}`);
+      
+      flows.push({
+        name: logicName,
+        processName: processMatch[1],
+        trigger: actionName,  // Use action name without _button
+        buttonName: buttonName,  // Keep original button name for interface lookup
+        fromInterface: getInterfaceForButton(content, buttonName),
+        redirectTo: processMatch[3],
+        actionName: processMatch[1]
+      });
+    }
   }
   
+  console.log(`✅ Extracted ${flows.length} logic flows:`, flows);
   return flows;
+}
+
+function getInterfaceForButton(content, buttonName) {
+  // Find which interface contains this button
+  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|$)/gs;
+  let match;
+  
+  while ((match = interfaceRegex.exec(content)) !== null) {
+    const interfaceName = match[1];
+    const interfaceContent = match[2];
+    
+    if (interfaceContent.includes(buttonName)) {
+      return interfaceName;
+    }
+  }
+  
+  return null;
 }
 
 function generateStateNodes(interfaces) {
@@ -175,24 +232,22 @@ function generateMessageFlows(logicFlows) {
 }
 
 function groupIntoScenes(stateNodes, messageFlows) {
-  // Group nodes by interface/scene
-  const sceneGroups = {};
+  // Get the current APML spec to access parsed flows
+  let currentSpec;
+  apmlSpec.subscribe(spec => currentSpec = spec)();
   
-  stateNodes.forEach(node => {
-    if (!sceneGroups[node.sceneGroup]) {
-      sceneGroups[node.sceneGroup] = {
-        id: crypto.randomUUID(),
-        sceneName: node.sceneGroup,
-        description: `${node.sceneGroup} flow scene`,
-        stateNodes: [],
-        primaryFlowPath: [],
-        sceneOrder: Object.keys(sceneGroups).length + 1
-      };
-    }
-    sceneGroups[node.sceneGroup].stateNodes.push(node);
-  });
+  // Create a single scene containing all interfaces and their connections
+  const mainScene = {
+    id: crypto.randomUUID(),
+    sceneName: 'main_flow',
+    description: 'Complete application flow',
+    stateNodes: stateNodes,
+    logicFlows: currentSpec.parsedFlows || [],
+    primaryFlowPath: [],
+    sceneOrder: 1
+  };
   
-  return Object.values(sceneGroups);
+  return [mainScene];
 }
 
 function extractActionsFromInterface(definition) {

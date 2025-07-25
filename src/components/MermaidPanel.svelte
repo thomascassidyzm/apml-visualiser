@@ -39,7 +39,11 @@
             useMaxWidth: true,
             htmlLabels: true,
             curve: 'basis'
-          }
+          },
+          // CR1: Disable node dragging and repositioning 
+          pan: false,
+          zoom: false,
+          dragPan: false
         });
         mermaidLoaded = true;
       };
@@ -151,55 +155,104 @@
   function generateConnectionPaths(nodes) {
     const paths = [];
     
-    // Create flowing connections between nodes
-    for (let i = 0; i < nodes.length - 1; i++) {
-      const currentNode = `node${i}`;
-      const nextNode = `node${i + 1}`;
-      
-      // Different arrow styles for visual variety
-      const styles = [
-        '-->',      // solid arrow
-        '-.->',     // dotted arrow  
-        '==>',      // thick arrow
-        '-->'       // default
-      ];
-      
-      const style = styles[i % styles.length];
-      paths.push({
-        from: currentNode,
-        to: nextNode,
-        style: style
+    // Create a mapping of interface names to node indices
+    const interfaceToNodeIndex = {};
+    nodes.forEach((node, index) => {
+      interfaceToNodeIndex[node.interfaceName] = index;
+    });
+    
+    // Parse logic flows from currentSceneData to create proper connections
+    if (currentSceneData.logicFlows) {
+      currentSceneData.logicFlows.forEach(flow => {
+        if (flow.redirectTo) {
+          const fromIndex = interfaceToNodeIndex[flow.fromInterface];
+          const toIndex = interfaceToNodeIndex[flow.redirectTo];
+          
+          if (fromIndex !== undefined && toIndex !== undefined) {
+            paths.push({
+              from: `node${fromIndex}`,
+              to: `node${toIndex}`,
+              style: '-->',
+              label: flow.trigger || flow.actionName
+            });
+          }
+        }
       });
     }
     
-    // Add some curved connections for visual interest
-    if (nodes.length > 2) {
-      paths.push({
-        from: `node${nodes.length - 1}`,
-        to: 'node0',
-        style: '-.->',
-        label: 'restart'
-      });
+    // If no logic flows found, create basic sequential connections as fallback
+    if (paths.length === 0) {
+      for (let i = 0; i < nodes.length - 1; i++) {
+        paths.push({
+          from: `node${i}`,
+          to: `node${i + 1}`,
+          style: '-->'
+        });
+      }
     }
     
     return paths;
   }
   
   function addInteractivity() {
-    // Add hover effects to nodes
+    // CR1: Apply fixed positioning and prevent node repositioning
     const svgNodes = mermaidContainer.querySelectorAll('.node');
-    svgNodes.forEach(node => {
+    svgNodes.forEach((node, index) => {
+      // Apply fixed positioning - prevent any movement
       node.style.cursor = 'pointer';
+      node.style.position = 'relative';
+      
+      // Store original position to prevent drift
+      const originalTransform = node.style.transform || '';
+      
+      // Disable drag behaviors completely
+      node.addEventListener('dragstart', (e) => e.preventDefault());
+      node.addEventListener('drag', (e) => e.preventDefault());
+      node.addEventListener('dragend', (e) => e.preventDefault());
+      node.addEventListener('mousedown', (e) => {
+        // Prevent default dragging but allow click events
+        if (e.button === 0) { // Left click only
+          e.stopPropagation();
+        }
+      });
+      
+      // Add hover effects while maintaining fixed position
       node.addEventListener('mouseenter', () => {
         node.style.filter = 'brightness(1.2) drop-shadow(0 0 10px rgba(139, 92, 246, 0.5))';
-        node.style.transform = 'scale(1.05)';
+        // Use scale transform but preserve original position
+        node.style.transform = originalTransform + ' scale(1.05)';
         node.style.transition = 'all 0.2s ease';
+        node.style.transformOrigin = 'center center';
       });
+      
       node.addEventListener('mouseleave', () => {
         node.style.filter = 'none';
-        node.style.transform = 'scale(1)';
+        // Reset to original transform, maintaining position
+        node.style.transform = originalTransform;
+      });
+      
+      // Handle click events for state changes
+      node.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        // Ensure position stays fixed after click
+        node.style.transform = originalTransform;
+        // Call the Mermaid click handler
+        const nodeId = `node${index}`;
+        handleNodeClick(nodeId);
       });
     });
+    
+    // Disable any SVG-level dragging
+    const svgElement = mermaidContainer.querySelector('svg');
+    if (svgElement) {
+      svgElement.style.pointerEvents = 'auto';
+      svgElement.addEventListener('dragstart', (e) => e.preventDefault());
+      
+      // Add fixed positioning to the entire SVG
+      svgElement.style.position = 'relative';
+      svgElement.style.overflow = 'visible';
+    }
     
     // Add pulse animation to connections
     const connections = mermaidContainer.querySelectorAll('.path');

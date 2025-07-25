@@ -1,0 +1,367 @@
+app APMLDevelopmentEngine:
+  title: "APML Development Engine (ADE)"
+  description: "Complete APML ecosystem from conversation to deployed application"
+  version: "2.0.0"
+  apml_specification_version: "0.9.0"
+  tagline: "From Intent to Internet in Minutes"
+
+# =====================================
+# PHASE 1: APML CREATION (Claude + MCP)
+# =====================================
+
+component claude_mcp_interface:
+  title: "Claude MCP APML Generator"
+  description: "Conversational APML creation with real-time validation"
+  location: "claude.ai with MCP servers"
+  
+  capabilities:
+    apml_generation: "Generate APML from natural language"
+    real_time_validation: "Validate APML syntax on-the-fly"
+    auto_export: "Automatically send APML to ADE"
+    template_library: "Access to APML patterns and templates"
+
+# =====================================
+# PHASE 2: APML DEVELOPMENT ENGINE (ADE)
+# =====================================
+
+app APMLDevelopmentEngine_Web:
+  title: "ADE - Visual Development Environment"
+  description: "Interactive APML visualization, testing, and iteration"
+  deployment_url: "ade.apml.dev"
+
+data APMLProject:
+  id: unique_id
+  name: text required
+  apml_content: text required
+  created_at: datetime required
+  last_modified: datetime required
+  deployment_status: text default "draft"
+  netlify_site_id: text optional
+  live_url: text optional
+  change_requests: ChangeRequest[]
+
+data ChangeRequest:
+  id: unique_id
+  project_id: unique_id required
+  screen_id: text required
+  request_type: text default "ui_change"
+  priority: text default "medium"
+  description: text required
+  created_at: datetime required
+  status: text default "pending"
+  claude_conversation_id: text optional
+
+data NetlifyDeployment:
+  site_id: text required
+  site_name: text required
+  deploy_url: text required
+  admin_url: text required
+  deploy_key: text required
+  last_deployed: datetime required
+  build_status: text default "ready"
+
+# =====================================
+# ADE INTERFACE SPECIFICATIONS
+# =====================================
+
+interface ade_landing:
+  show hero_section:
+    title: "APML Development Engine"
+    subtitle: "From Conversation to Deployed App"
+    description: "Import APML, visualize flows, iterate with AI, deploy instantly"
+    
+    import_methods:
+      paste_apml_button:
+        text: "📋 Paste APML"
+        description: "Copy from Claude conversation"
+      upload_file_button:
+        text: "📁 Upload .apml File"
+      mcp_import_button:
+        text: "🔗 Auto-Import from Claude MCP"
+        description: "Seamless Claude integration"
+    
+    recent_projects:
+      title: "Recent Projects"
+      project_list: APMLProject[]
+      create_new_button: "➕ New Project"
+
+interface ade_workspace:
+  show main_development_environment:
+    title: "ADE Workspace"
+    project_name: dynamic
+    
+    # Left Panel - APML Source
+    apml_editor_panel:
+      title: "APML Source"
+      apml_textarea: 
+        syntax_highlighting: true
+        real_time_validation: true
+        line_numbers: true
+      validation_status: dynamic
+      save_button: "💾 Save Changes"
+      claude_edit_button: "🤖 Edit in Claude"
+    
+    # Center Panel - Visual Preview
+    visual_preview_panel:
+      title: "Live Mobile Preview"
+      phone_mockup:
+        current_screen: dynamic
+        interaction_recording: true
+      flow_diagram:
+        mermaid_visualization: dynamic
+        node_click_interactions: true
+        export_diagram_button: "📊 Export Flow"
+    
+    # Right Panel - Testing & Deployment
+    deployment_panel:
+      title: "Testing & Deployment"
+      
+      testing_section:
+        automated_testing_tab:
+          run_all_tests_button: "🧪 Test All Paths"
+          test_results: dynamic
+        
+        manual_testing_tab:
+          current_path: dynamic
+          available_actions: dynamic
+          path_history: dynamic
+        
+        change_requests_tab:
+          add_cr_button: "📝 Add Change Request"
+          cr_list: ChangeRequest[]
+          send_to_claude_button: "🤖 Send CRs to Claude"
+      
+      deployment_section:
+        netlify_config:
+          site_name_input:
+            placeholder: "my-awesome-app"
+          deploy_token_input:
+            type: "password"
+            placeholder: "Netlify Deploy Token"
+        
+        deployment_actions:
+          preview_deploy_button: "👀 Preview Deploy"
+          live_deploy_button: "🚀 Deploy Live"
+          deployment_status: dynamic
+          live_site_link: dynamic
+
+interface change_request_creator:
+  show cr_form:
+    title: "Create Change Request"
+    current_screen: dynamic
+    
+    request_details:
+      description_textarea:
+        placeholder: "Describe what you'd like to change..."
+        rows: 4
+      request_type_select:
+        options: ["ui_change", "feature_request", "bug_fix", "content_update", "design_improvement"]
+      priority_select:
+        options: ["low", "medium", "high", "critical"]
+      screen_reference: dynamic
+    
+    claude_integration:
+      auto_send_to_claude: boolean default true
+      conversation_context: text
+      attach_screenshot: boolean default true
+    
+    actions:
+      save_cr_button: "💾 Save Change Request"
+      save_and_send_button: "🤖 Save & Send to Claude"
+      cancel_button: "❌ Cancel"
+
+interface deployment_progress:
+  show deployment_status:
+    title: "Deploying to Netlify"
+    
+    progress_steps:
+      step_compile:
+        title: "Compiling APML to Production Code"
+        status: dynamic
+        details: "Generating optimized HTML, CSS, JS..."
+      
+      step_build:
+        title: "Building Production Assets"
+        status: dynamic
+        details: "Bundling and minifying files..."
+      
+      step_deploy:
+        title: "Deploying to Netlify"
+        status: dynamic
+        details: "Uploading to CDN..."
+      
+      step_dns:
+        title: "Configuring DNS"
+        status: dynamic
+        details: "Setting up custom domain..."
+    
+    deployment_result:
+      live_site_url: dynamic
+      admin_panel_url: dynamic
+      deploy_time: dynamic
+      
+    actions:
+      visit_site_button: "🌐 Visit Live Site"
+      share_url_button: "📋 Copy URL"
+      back_to_editor_button: "← Back to Editor"
+
+# =====================================
+# PHASE 3: LIVE SITE FEEDBACK LOOP
+# =====================================
+
+interface live_site_integration:
+  show feedback_widget:
+    title: "ADE Feedback Widget"
+    description: "Embedded in deployed sites for continuous iteration"
+    
+    feedback_button:
+      text: "💡 Suggest Changes"
+      position: "bottom-right"
+      style: "floating"
+    
+    feedback_form:
+      page_context: dynamic
+      change_description: text
+      urgency_level: select
+      screenshot_capture: automatic
+      
+    direct_claude_integration:
+      send_to_claude: boolean default true
+      include_context: boolean default true
+
+# =====================================
+# LOGIC FLOWS - THE COMPLETE ECOSYSTEM
+# =====================================
+
+logic phase1_apml_creation:
+  process claude_conversation:
+    when user describes app_idea:
+      generate initial_apml_spec
+      validate apml_syntax
+      offer refinements
+      auto_export to ADE
+
+  process mcp_integration:
+    when claude generates apml:
+      automatically open ADE_workspace
+      import apml_content
+      start visual_preview
+
+logic phase2_ade_development:
+  process import_apml:
+    when user pastes apml_content:
+      validate apml_syntax
+      parse into visual_components
+      generate mobile_mockup
+      create flow_diagram
+      redirect to ade_workspace
+
+  process visual_iteration:
+    when user interacts with mockup:
+      record user_actions
+      update current_screen
+      highlight flow_paths
+      enable change_requests
+
+  process change_request_creation:
+    when user clicks add_cr_button:
+      capture current_context
+      redirect to change_request_creator
+      
+  process send_crs_to_claude:
+    when user clicks send_to_claude_button:
+      package all change_requests
+      include project_context
+      generate claude_prompt
+      open claude_conversation
+      maintain ade_session
+
+logic phase3_deployment:
+  process preview_deployment:
+    when user clicks preview_deploy_button:
+      compile apml to production_code
+      create temporary_deployment
+      show preview_url
+      enable final_testing
+
+  process live_deployment:
+    when user clicks live_deploy_button:
+      compile apml to production_code
+      zip production_files
+      deploy to netlify_api
+      configure custom_domain
+      redirect to deployment_progress
+      
+  process deployment_success:
+    when netlify deployment completes:
+      store live_site_url
+      embed feedback_widget
+      enable continuous_iteration
+      notify user of success
+
+logic continuous_iteration:
+  process live_site_feedback:
+    when user submits feedback on live_site:
+      capture page_context
+      create new change_request
+      auto_send to claude_conversation
+      link back to ADE_workspace
+
+  process claude_updates:
+    when claude provides updated_apml:
+      import into existing ADE_project
+      show visual_diff
+      enable quick_redeploy
+      maintain version_history
+
+# =====================================
+# INTEGRATION SPECIFICATIONS
+# =====================================
+
+integration claude_mcp:
+  endpoint: "mcp://apml-development-server"
+  capabilities:
+    export_to_ade: "POST /ade/import"
+    receive_change_requests: "GET /ade/change-requests/{project-id}"
+    validate_apml: "POST /validate"
+
+integration netlify_api:
+  endpoint: "https://api.netlify.com/api/v1"
+  capabilities:
+    create_site: "POST /sites"
+    deploy_files: "POST /sites/{site-id}/deploys"
+    configure_domain: "PUT /sites/{site-id}/domains"
+    get_deploy_status: "GET /deploys/{deploy-id}"
+
+integration browser_apis:
+  capabilities:
+    clipboard: "navigator.clipboard for APML copying"
+    file_system: "File API for .apml upload/download"
+    zip_creation: "JSZip for deployment packages"
+    screenshot: "html2canvas for visual feedback"
+
+# =====================================
+# SAMPLE WORKFLOW DATA
+# =====================================
+
+data sample_workflow:
+  step_1: "User: 'I want a simple todo app'"
+  step_2: "Claude: Generates APML spec via MCP"
+  step_3: "ADE: Auto-imports and visualizes"
+  step_4: "User: Interacts with mockup, adds CRs"
+  step_5: "Claude: Receives CRs, updates APML"
+  step_6: "ADE: Shows updated visualization"
+  step_7: "User: Clicks 'Deploy Live'"
+  step_8: "ADE: Deploys to Netlify in 30 seconds"
+  step_9: "Live Site: Users provide feedback"
+  step_10: "Loop: Feedback → Claude → ADE → Deploy"
+
+# =====================================
+# SUCCESS METRICS
+# =====================================
+
+data success_metrics:
+  time_to_deployment: "< 5 minutes from conversation"
+  iteration_speed: "< 30 seconds per change"
+  user_satisfaction: "Seamless intent-to-internet flow"
+  adoption_rate: "Fastest prototyping tool available"
