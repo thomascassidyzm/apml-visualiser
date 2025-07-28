@@ -1,12 +1,14 @@
 {
-  "name": "apml-visualiser",
+  "name": "trinity-apml-visualiser",
   "version": "1.0.0",
-  "description": "APML Development Engine - Interactive Flow Visualiser",
+  "description": "Trinity APML Visualiser - Real-time validator with beautiful simulator aesthetics",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host --port 3000",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview --port 3000 --host",
+    "serve": "vite preview --port 3000 --host",
+    "start": "node server.js"
   },
   "devDependencies": {
     "@sveltejs/vite-plugin-svelte": "^3.0.0",
@@ -17,6 +19,12 @@
     "vite": "^5.0.0"
   },
   "dependencies": {
-    "svelte-spa-router": "^4.0.0"
+    "svelte-spa-router": "^4.0.0",
+    "js-yaml": "^4.1.0",
+    "mermaid": "^10.6.1",
+    "express": "^4.18.2",
+    "ws": "^8.16.0",
+    "chokidar": "^3.5.3",
+    "cors": "^2.8.5"
   }
 }

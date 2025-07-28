@@ -161,8 +161,10 @@ function extractLogicFlows(content) {
     
     console.log(`📋 Found logic block: ${logicName}`, logicContent);
     
-    // Parse individual processes within this logic block - handle both button names and action names
+    // Parse individual processes within this logic block - handle both button names and action names  
     const processRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+(?:_button)?):\s*redirect\s+to\s+(\w+)/g;
+    // Also try simpler pattern for this APML format
+    const simpleProcessRegex = /process\s+(\w+):/g;
     let processMatch;
     
     while ((processMatch = processRegex.exec(logicContent)) !== null) {
@@ -181,6 +183,23 @@ function extractLogicFlows(content) {
         redirectTo: processMatch[3],
         actionName: processMatch[1]
       });
+    }
+    
+    // If no specific flows found, create basic flows from process names
+    if (flows.filter(f => f.name === logicName).length === 0) {
+      let simpleMatch;
+      while ((simpleMatch = simpleProcessRegex.exec(logicContent)) !== null) {
+        const processName = simpleMatch[1];
+        flows.push({
+          name: logicName,
+          processName: processName,
+          trigger: processName,
+          buttonName: `${processName}_button`,
+          fromInterface: null,
+          redirectTo: null,
+          actionName: processName
+        });
+      }
     }
   }
   
