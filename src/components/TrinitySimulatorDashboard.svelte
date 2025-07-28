@@ -16,6 +16,7 @@
   let messageSequence = [];
   let availableApmlFiles = [];
   let showFileSelector = false;
+  let mermaidLoaded = false;
 
   // Subscribe to stores
   const unsubscribeApml = apmlSpec.subscribe(value => {
@@ -34,7 +35,64 @@
   onMount(() => {
     connectWebSocket();
     initializeSimulator();
+    loadMermaid();
   });
+  
+  async function loadMermaid() {
+    try {
+      // Load Mermaid from CDN
+      const script = document.createElement('script');
+      script.src = 'https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js';
+      script.onload = () => {
+        window.mermaid.initialize({ 
+          theme: 'dark',
+          startOnLoad: false,
+          flowchart: {
+            useMaxWidth: true,
+            htmlLabels: true
+          }
+        });
+        mermaidLoaded = true;
+        console.log('✅ Mermaid loaded successfully');
+        
+        // If we already have a diagram, render it
+        if (flowDiagram) {
+          renderMermaidDiagram();
+        }
+      };
+      document.head.appendChild(script);
+    } catch (error) {
+      console.error('❌ Failed to load Mermaid:', error);
+    }
+  }
+  
+  async function renderMermaidDiagram() {
+    if (!mermaidLoaded || !flowDiagram) return;
+    
+    try {
+      const container = document.getElementById('mermaid-container');
+      if (container) {
+        container.innerHTML = ''; // Clear previous content
+        
+        const uniqueId = 'mermaid-' + Date.now();
+        const { svg } = await window.mermaid.render(uniqueId, flowDiagram);
+        container.innerHTML = svg;
+        
+        console.log('✅ Mermaid diagram rendered successfully');
+      }
+    } catch (error) {
+      console.error('❌ Failed to render Mermaid diagram:', error);
+      const container = document.getElementById('mermaid-container');
+      if (container) {
+        container.innerHTML = `<div class="text-red-400 p-4">Failed to render diagram: ${error.message}</div>`;
+      }
+    }
+  }
+  
+  // Watch for flowDiagram changes and re-render
+  $: if (mermaidLoaded && flowDiagram) {
+    renderMermaidDiagram();
+  }
 
   onDestroy(() => {
     if (websocket) {
@@ -241,44 +299,44 @@
   }
 
   function generateFlowDiagram() {
-    if (!currentApml || !currentApml.screens) {
+    if (!simulatorScreens || simulatorScreens.length === 0) {
       flowDiagram = 'flowchart TD\n    A[No screens found]';
       return;
     }
 
     let mermaid = 'flowchart TD\n';
     
-    // Add nodes with beautiful styling
-    Object.entries(currentApml.screens).forEach(([screenId, screen]) => {
-      const cleanName = screen.name?.replace(' Screen', '') || screenId;
-      const isMain = ['chat_screen', 'task_screen', 'file_screen', 'team_screen'].includes(screenId);
+    // Add nodes with beautiful styling using simulatorScreens array
+    simulatorScreens.forEach((screen, index) => {
+      const cleanName = screen.name?.replace(' Screen', '') || screen.id;
+      const isSelected = selectedScreen && selectedScreen.id === screen.id;
       
-      if (isMain) {
-        mermaid += `    ${screenId}["🏠 ${cleanName}"]:::mainScreen\n`;
+      if (isSelected) {
+        mermaid += `    ${screen.id}["🏠 ${cleanName}"]:::selectedScreen\n`;
       } else {
-        mermaid += `    ${screenId}["${cleanName}"]:::flowScreen\n`;
+        mermaid += `    ${screen.id}["${cleanName}"]:::flowScreen\n`;
       }
     });
     
-    // Add connections
-    Object.entries(currentApml.screens).forEach(([screenId, screen]) => {
-      if (screen.user_actions) {
+    // Add connections based on screen actions
+    simulatorScreens.forEach(screen => {
+      if (screen.actions) {
         const connections = new Set();
-        screen.user_actions.forEach(action => {
-          if (action.next_screen && currentApml.screens[action.next_screen]) {
-            connections.add(action.next_screen);
+        screen.actions.forEach(action => {
+          if (action.nextScreenId && simulatorScreens.find(s => s.id === action.nextScreenId)) {
+            connections.add(action.nextScreenId);
           }
         });
         
         connections.forEach(nextScreen => {
-          mermaid += `    ${screenId} --> ${nextScreen}\n`;
+          mermaid += `    ${screen.id} --> ${nextScreen}\n`;
         });
       }
     });
     
     // Add beautiful styling
     mermaid += `
-    classDef mainScreen fill:#10b981,stroke:#059669,stroke-width:3px,color:#fff
+    classDef selectedScreen fill:#10b981,stroke:#059669,stroke-width:3px,color:#fff
     classDef flowScreen fill:#3b82f6,stroke:#2563eb,stroke-width:2px,color:#fff
     classDef currentScreen fill:#f59e0b,stroke:#d97706,stroke-width:4px,color:#000
 `;
@@ -561,6 +619,7 @@
   $: if (selectedScreen) {
     generateFlowDiagram();
   }
+
 </script>
 
 <div class="min-h-screen bg-gray-900 text-white">
@@ -600,13 +659,9 @@
         
         <div class="h-full p-6 bg-gray-900 rounded-lg border border-gray-600">
           {#if flowDiagram && typeof flowDiagram === 'string'}
-            <div class="w-full h-full flex items-center justify-center">
-              <div class="text-center">
-                <div class="text-4xl mb-4">🔄</div>
-                <p class="text-gray-400">Flow diagram generated!</p>
-                <div class="mt-4 p-4 bg-gray-800 rounded text-xs text-green-400 font-mono">
-                  {flowDiagram.substring(0, 200)}...
-                </div>
+            <div class="w-full h-full">
+              <div id="mermaid-container" class="w-full h-full flex items-center justify-center bg-gray-800 rounded">
+                <!-- Mermaid will render here -->
               </div>
             </div>
           {:else}
