@@ -2101,11 +2101,8 @@
     <div class="w-7/10 bg-gray-800 border-r border-gray-700 p-4 overflow-y-auto flex flex-col" style="width: 70%;">
       <!-- Flow Diagram - Much Taller for Complex Apps -->
       <div class="h-4/5">
-        <div class="flex items-center justify-between mb-4">
+        <div class="mb-4">
           <h2 class="text-xl font-semibold">🗺️ Trinity Flow Diagram</h2>
-          <button on:click={loadAvailableApmlFiles} class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors">
-            📁 Load APML
-          </button>
         </div>
         
         <div class="h-full p-6 bg-gray-900 rounded-lg border border-gray-600">

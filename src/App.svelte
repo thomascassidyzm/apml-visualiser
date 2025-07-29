@@ -25,7 +25,7 @@
 <main class="min-h-screen bg-gray-900 text-white">
   <!-- Beautiful Header with Simulator Aesthetics -->
   <header class="bg-gray-800 border-b border-gray-700 sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-6 py-4">
+    <div class="w-full px-6 py-4">
       <div class="flex items-center justify-between">
         <a href="#/" class="flex items-center space-x-4">
           <div class="w-10 h-10 bg-gradient-to-br from-green-500 to-blue-500 rounded-xl flex items-center justify-center">
@@ -61,21 +61,37 @@
   <!-- Input APML Popup -->
   {#if showInputPopup}
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div class="bg-gray-800 rounded-lg p-6 max-w-4xl w-full mx-4 max-h-[80vh] overflow-y-auto">
+      <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[70vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-xl font-bold text-white">📝 Input APML</h2>
+          <h2 class="text-lg font-semibold text-white">📝 Paste APML</h2>
           <button 
             on:click={() => showInputPopup = false}
             class="text-gray-400 hover:text-white transition-colors"
           >
-            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
             </svg>
           </button>
         </div>
         
-        <!-- APML Input Component -->
-        <APMLInputScreen />
+        <div class="space-y-4">
+          <textarea 
+            placeholder="Paste your APML code here..."
+            class="w-full h-64 bg-gray-800 border border-gray-600 rounded text-white p-3 text-sm font-mono resize-none focus:outline-none focus:border-blue-500"
+          ></textarea>
+          
+          <div class="flex justify-end space-x-3">
+            <button 
+              on:click={() => showInputPopup = false}
+              class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+            >
+              Cancel
+            </button>
+            <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
+              Parse & Visualize
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   {/if}
