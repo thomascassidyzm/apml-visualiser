@@ -509,26 +509,68 @@
   }
 
   function generateSimulatorFromApml(apmlData) {
-    // Convert APML flows to simulator screens
-    const screens = apmlData.stateNodes.map(node => ({
-      id: node.interfaceName,
-      name: node.interfaceName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
-      description: node.displayContent || `Interface for ${node.interfaceName}`,
-      layout: determineLayoutFromName(node.interfaceName),
-      actions: node.availableActions.map(action => ({
+    console.log('📱 Compiling APML into iPhone simulator...', apmlData);
+    
+    // Convert APML state nodes to rich simulator screens
+    const screens = apmlData.stateNodes.map(node => {
+      const actions = node.availableActions.map(action => ({
         id: `${node.interfaceName}_${action}`,
         label: action.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
         description: `Perform ${action} action`,
         nextScreenId: findNextScreen(node.interfaceName, action, apmlData.parsedFlows),
         color: getActionColor(action)
-      }))
-    }));
+      }));
+      
+      return {
+        id: node.interfaceName,
+        name: node.displayContent || node.interfaceName.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase()),
+        description: `${node.interfaceName} interface with ${actions.length} interactions`,
+        layout: node.layout || determineLayoutFromName(node.interfaceName),
+        actions: actions,
+        // Enhanced simulator data
+        elements: node.extractedElements || [],
+        trinityType: determineTrinityType(node, apmlData.parsedFlows),
+        screenData: generateScreenData(node)
+      };
+    });
 
     simulatorScreens = screens;
+    currentApmlContent = apmlData.rawContent || '';
+    
     if (screens.length > 0 && !selectedScreen) {
       selectedScreen = screens[0];
+      addMessage('system', `🎯 Loaded ${screens.length} screens from APML compilation`);
     }
+    
+    // Generate Trinity flow diagram
     generateFlowDiagram();
+    
+    // Start Trinity validation
+    const validation = validateTrinityCompleteness();
+    addMessage('trinity', `📊 Trinity completeness: ${validation.completenessScore}%`);
+    
+    console.log('✅ Simulator compilation complete:', screens);
+  }
+  
+  function determineTrinityType(node, flows) {
+    const hasActions = node.availableActions && node.availableActions.length > 0;
+    const hasFlow = flows.some(f => f.fromInterface === node.interfaceName);
+    const hasElements = node.extractedElements && node.extractedElements.length > 0;
+    
+    if (hasElements && !hasActions) return 'SHOW';
+    if (hasActions && hasFlow) return 'DO';
+    if (hasFlow) return 'PROCESS';
+    return 'SHOW';
+  }
+  
+  function generateScreenData(node) {
+    return {
+      interfaceName: node.interfaceName,
+      layout: node.layout,
+      elementCount: node.extractedElements?.length || 0,
+      interactiveCount: node.extractedElements?.filter(el => el.interactive).length || 0,
+      actionCount: node.availableActions?.length || 0
+    };
   }
 
   function generateSimulatorFromScenes(scenes) {

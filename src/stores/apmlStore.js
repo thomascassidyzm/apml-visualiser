@@ -50,29 +50,50 @@ export const isAuthenticated = derived(
 export const apmlStore = {
   parseAPML: (content) => {
     try {
-      // Simple APML parser for demonstration
+      console.log('🔄 Starting APML compilation process...');
+      
+      // Step 1: Extract APML components
       const interfaces = extractInterfaces(content);
       const dataModels = extractDataModels(content);
       const logicFlows = extractLogicFlows(content);
       
-      const stateNodes = generateStateNodes(interfaces);
-      const messageFlows = generateMessageFlows(logicFlows);
-      const scenes = groupIntoScenes(stateNodes, messageFlows);
+      console.log('📋 Extracted components:', {
+        interfaces: interfaces.length,
+        dataModels: dataModels.length, 
+        logicFlows: logicFlows.length
+      });
       
+      // Step 2: Generate state nodes for Trinity validation
+      const stateNodes = generateStateNodes(interfaces);
+      console.log('🎯 Generated state nodes:', stateNodes.length);
+      
+      // Step 3: Generate message flows for Trinity patterns
+      const messageFlows = generateMessageFlows(logicFlows);
+      console.log('🔄 Generated message flows:', messageFlows.length);
+      
+      // Step 4: Create simulator-ready scenes
+      const scenes = groupIntoScenes(stateNodes, messageFlows, logicFlows);
+      console.log('📱 Generated scenes for simulator:', scenes.length);
+      
+      // Step 5: Update stores with compiled data
       apmlSpec.update(spec => ({
         ...spec,
         rawContent: content,
         parsedFlows: logicFlows,
         stateNodes,
         messageFlows,
+        interfaces,
+        dataModels,
         validationStatus: 'valid',
         parseErrors: []
       }));
       
       flowScenes.set(scenes);
       
+      console.log('✅ APML compilation complete - Trinity & Simulator ready!');
       return true;
     } catch (error) {
+      console.error('❌ APML compilation failed:', error);
       apmlSpec.update(spec => ({
         ...spec,
         validationStatus: 'invalid',
@@ -237,16 +258,56 @@ function getInterfaceForButton(content, buttonName) {
 }
 
 function generateStateNodes(interfaces) {
-  return interfaces.map((iface, index) => ({
-    id: crypto.randomUUID(),
-    interfaceName: iface.name,
-    displayContent: `${iface.name} Interface`,
-    availableActions: extractActionsFromInterface(iface.definition),
-    nodeType: 'app_to_user',
-    sceneGroup: iface.name,
-    positionX: (index % 3) * 200,
-    positionY: Math.floor(index / 3) * 150
-  }));
+  return interfaces.map((iface, index) => {
+    const actions = extractActionsFromInterface(iface.definition, iface.name);
+    
+    return {
+      id: crypto.randomUUID(),
+      interfaceName: iface.name,
+      displayContent: `${iface.name.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())} Interface`,
+      availableActions: actions,
+      nodeType: 'app_to_user',
+      sceneGroup: iface.name,
+      positionX: (index % 3) * 200,
+      positionY: Math.floor(index / 3) * 150,
+      // Enhanced for simulator
+      layout: determineLayoutType(iface.definition, iface.name),
+      interfaceDefinition: iface.definition,
+      extractedElements: extractUIElements(iface.definition)
+    };
+  });
+}
+
+function determineLayoutType(definition, interfaceName) {
+  const name = interfaceName.toLowerCase();
+  const def = definition.toLowerCase();
+  
+  if (name.includes('sort') || def.includes('sort')) return 'list';
+  if (name.includes('chat') || def.includes('message')) return 'chat';
+  if (name.includes('task') || def.includes('todo')) return 'task';
+  if (name.includes('file') || def.includes('upload')) return 'file';
+  if (name.includes('form') || def.includes('input')) return 'form';
+  if (name.includes('search') || def.includes('filter')) return 'search';
+  
+  return 'default';
+}
+
+function extractUIElements(definition) {
+  const elements = [];
+  
+  // Extract show elements that become UI components
+  const showRegex = /show\s+(\w+):\s*text:\s*"([^"]+)"/g;
+  let match;
+  while ((match = showRegex.exec(definition)) !== null) {
+    elements.push({
+      type: match[1].includes('button') ? 'button' : 'text',
+      id: match[1],
+      text: match[2],
+      interactive: match[1].includes('button')
+    });
+  }
+  
+  return elements;
 }
 
 function generateMessageFlows(logicFlows) {
@@ -262,23 +323,75 @@ function generateMessageFlows(logicFlows) {
   }));
 }
 
-function groupIntoScenes(stateNodes, messageFlows) {
-  // Get the current APML spec to access parsed flows
-  let currentSpec;
-  apmlSpec.subscribe(spec => currentSpec = spec)();
-  
-  // Create a single scene containing all interfaces and their connections
+function groupIntoScenes(stateNodes, messageFlows, logicFlows) {
+  // Create a comprehensive scene with all Trinity components
   const mainScene = {
     id: crypto.randomUUID(),
     sceneName: 'main_flow',
-    description: 'Complete application flow',
+    description: 'Complete application flow with Trinity validation',
     stateNodes: stateNodes,
-    logicFlows: currentSpec.parsedFlows || [],
-    primaryFlowPath: [],
-    sceneOrder: 1
+    logicFlows: logicFlows || [],
+    messageFlows: messageFlows || [],
+    primaryFlowPath: generatePrimaryPath(stateNodes, logicFlows),
+    sceneOrder: 1,
+    // Trinity-specific metadata
+    trinityPattern: analyzeTrinityPatterns(stateNodes, logicFlows),
+    simulatorConfig: generateSimulatorConfig(stateNodes)
   };
   
+  console.log('📱 Scene created with Trinity patterns:', mainScene.trinityPattern);
   return [mainScene];
+}
+
+function generatePrimaryPath(stateNodes, logicFlows) {
+  // Create the main user journey through the interface
+  if (!stateNodes || stateNodes.length === 0) return [];
+  
+  const path = [stateNodes[0].interfaceName];
+  
+  // Follow logical flow connections
+  logicFlows.forEach(flow => {
+    if (flow.redirectTo && !path.includes(flow.redirectTo)) {
+      path.push(flow.redirectTo);
+    }
+  });
+  
+  return path;
+}
+
+function analyzeTrinityPatterns(stateNodes, logicFlows) {
+  // Analyze for SHOW → DO → PROCESS patterns
+  const patterns = {
+    showNodes: stateNodes.filter(node => node.extractedElements?.some(el => el.type === 'text')),
+    doNodes: stateNodes.filter(node => node.extractedElements?.some(el => el.interactive)),
+    processNodes: logicFlows.map(flow => flow.processName),
+    flowCompleteness: calculateFlowCompleteness(stateNodes, logicFlows)
+  };
+  
+  return patterns;
+}
+
+function calculateFlowCompleteness(stateNodes, logicFlows) {
+  if (stateNodes.length === 0) return 0;
+  
+  const connectedNodes = new Set();
+  logicFlows.forEach(flow => {
+    if (flow.fromInterface) connectedNodes.add(flow.fromInterface);
+    if (flow.redirectTo) connectedNodes.add(flow.redirectTo);
+  });
+  
+  return (connectedNodes.size / stateNodes.length) * 100;
+}
+
+function generateSimulatorConfig(stateNodes) {
+  return {
+    totalScreens: stateNodes.length,
+    startScreen: stateNodes[0]?.interfaceName || null,
+    screenTypes: stateNodes.map(node => node.layout),
+    interactionCount: stateNodes.reduce((count, node) => 
+      count + (node.extractedElements?.filter(el => el.interactive).length || 0), 0
+    )
+  };
 }
 
 function extractActionsFromInterface(definition, interfaceName) {
