@@ -109,9 +109,21 @@ function extractInterfaces(content) {
   let match;
   
   while ((match = interfaceRegex.exec(content)) !== null) {
+    const interfaceName = match[1];
+    const definition = match[2].trim();
+    
+    // Extract layout information
+    const layoutMatch = definition.match(/layout:\s*"([^"]+)"/);
+    const layout = layoutMatch ? layoutMatch[1] : 'default';
+    
+    // Enhanced action extraction from various APML patterns
+    const actions = extractActionsFromInterface(definition, interfaceName);
+    
     interfaces.push({
-      name: match[1],
-      definition: match[2].trim()
+      name: interfaceName,
+      definition: definition,
+      layout: layout,
+      extractedActions: actions
     });
   }
   
@@ -269,15 +281,88 @@ function groupIntoScenes(stateNodes, messageFlows) {
   return [mainScene];
 }
 
-function extractActionsFromInterface(definition) {
-  // Simple action extraction
+function extractActionsFromInterface(definition, interfaceName) {
   const actions = [];
+  
+  // Pattern 1: Button definitions (_button suffix)
   const buttonRegex = /(\w+)_button/g;
   let match;
-  
   while ((match = buttonRegex.exec(definition)) !== null) {
-    actions.push(match[1]);
+    actions.push({
+      name: match[1],
+      type: 'button',
+      source: 'button_definition'
+    });
   }
   
-  return actions.length > 0 ? actions : ['click', 'navigate'];
+  // Pattern 2: Action properties (action: "action_name")
+  const actionRegex = /action:\s*"([^"]+)"/g;
+  while ((match = actionRegex.exec(definition)) !== null) {
+    actions.push({
+      name: match[1],
+      type: 'action',
+      source: 'action_property'
+    });
+  }
+  
+  // Pattern 3: Text properties that suggest actions
+  const textRegex = /text:\s*"([^"]+)"/g;
+  while ((match = textRegex.exec(definition)) !== null) {
+    const text = match[1].toLowerCase();
+    if (text.includes('click') || text.includes('press') || text.includes('tap') || 
+        text.includes('button') || text.includes('submit') || text.includes('send')) {
+      const actionName = text.replace(/[^\w\s]/g, '').replace(/\s+/g, '_');
+      actions.push({
+        name: actionName,
+        type: 'interactive_text',
+        source: 'text_analysis'
+      });
+    }
+  }
+  
+  // Pattern 4: Show sections that might be interactive
+  const showRegex = /show\s+(\w+):/g;
+  while ((match = showRegex.exec(definition)) !== null) {
+    actions.push({
+      name: `view_${match[1]}`,
+      type: 'show_section',
+      source: 'show_section'
+    });
+  }
+  
+  // Pattern 5: Interface-specific defaults based on layout
+  const layoutMatch = definition.match(/layout:\s*"([^"]+)"/);
+  const layout = layoutMatch ? layoutMatch[1] : 'default';
+  
+  const layoutDefaults = {
+    'chat': ['send_message', 'view_history', 'add_attachment'],
+    'task': ['create_task', 'complete_task', 'edit_task'],
+    'file': ['upload_file', 'download_file', 'delete_file'],
+    'form': ['submit_form', 'reset_form', 'validate_input'],
+    'search': ['search', 'filter', 'sort_results'],
+    'default': ['navigate', 'interact', 'process']
+  };
+  
+  if (actions.length === 0 && layoutDefaults[layout]) {
+    layoutDefaults[layout].forEach(actionName => {
+      actions.push({
+        name: actionName,
+        type: 'layout_default',
+        source: 'layout_inference'
+      });
+    });
+  }
+  
+  // Ensure we always have at least some actions
+  if (actions.length === 0) {
+    actions.push({
+      name: 'navigate',
+      type: 'default',
+      source: 'fallback'
+    });
+  }
+  
+  // Remove duplicates and return just the names
+  const uniqueActions = [...new Set(actions.map(a => a.name))];
+  return uniqueActions;
 }

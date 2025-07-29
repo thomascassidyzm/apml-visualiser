@@ -1,0 +1,396 @@
+app TrinityAPMLVisualiser:
+  title: "Trinity APML Visualiser - ADE Development Engine Phase 2"
+  description: "APML→App Compiler with Trinity flow validation, real-time simulation, and Railway-quality aesthetics"
+  version: "2.0.0"
+  apml_specification_version: "0.9.1"
+  
+  theme:
+    primary_gradient: "linear-gradient(135deg, #1e293b 0%, #334155 50%, #475569 100%)"
+    accent_colors: ["#06b6d4", "#10b981", "#f59e0b", "#ef4444", "#8b5cf6"]
+    design_system: "railway_simulator_aesthetics"
+    animation_style: "smooth_glow_transitions"
+
+data APMLSpecification:
+  id: unique_id
+  rawContent: text required
+  parsedInterfaces: array<Interface>
+  parsedDataModels: array<DataModel> 
+  parsedLogicFlows: array<LogicFlow>
+  trinityValidation: TrinityValidationResult
+  compilationResult: CompilationResult
+  validationStatus: enum["parsing", "valid", "invalid", "trinity_incomplete"]
+  parseErrors: array<ValidationError>
+
+data TrinityValidationResult:
+  id: unique_id
+  isComplete: boolean
+  completenessScore: number # 0-100
+  deadEnds: array<interface_id>
+  infiniteLoops: array<flow_path>
+  raceConditions: array<conflict_description>
+  orphanedInterfaces: array<interface_id>
+  missingTrinityPatterns: array<pattern_violation>
+  trinityFlowCoverage: number # percentage of flows following SHOW→DO→PROCESS
+
+data TrinityFlow:
+  id: unique_id
+  type: enum["show", "do", "process"]
+  fromInterface: interface_id
+  toInterface: interface_id
+  triggerEvent: text
+  messageFlow: TrinityMessage
+  isActive: boolean default false
+  animationState: enum["dormant", "lighting_up", "active", "fading"]
+
+data TrinityMessage:
+  id: unique_id
+  direction: enum["system_to_user", "user_to_system", "system_to_system"]
+  content: text required
+  timestamp: datetime
+  trinityType: enum["show", "do", "process"]
+
+data CompilationResult:
+  id: unique_id
+  success: boolean
+  simulatorScreens: array<SimulatorScreen>
+  mermaidDiagram: text
+  executableFlows: array<ExecutableFlow>
+  compilerErrors: array<CompilerError>
+
+data SimulatorScreen:
+  id: unique_id
+  interfaceName: text required
+  layout: enum["chat", "task", "file", "team", "form", "upload", "search", "celebration", "default"]
+  compiledComponents: array<UIComponent>
+  actions: array<InteractiveAction>
+  trinityConnections: array<TrinityFlow>
+
+data InteractiveAction:
+  id: unique_id
+  label: text required
+  description: text
+  triggerEvent: text required
+  nextScreenId: interface_id
+  trinityType: enum["show", "do", "process"]
+  color: enum["blue", "green", "purple", "indigo", "orange", "red"]
+
+interface apml_input:
+  layout: "single_column_centered"
+  
+  show header_section:
+    title: "Trinity APML Visualiser"
+    subtitle: "ADE Development Engine - Phase 2: APML Verification & Compilation"
+    logo: gradient_icon
+    
+  show input_section:
+    title: "📝 APML Specification Input"
+    
+    apml_editor:
+      type: "code_editor"
+      language: "apml"
+      syntax_highlighting: true
+      line_numbers: true
+      height: "400px"
+      placeholder: "Paste your APML specification here...\n\nOr use MCP to import from Claude Desktop"
+      
+    input_controls:
+      layout: "horizontal_flex"
+      
+      parse_button:
+        text: "🚀 Compile & Validate"
+        style: "primary_button"
+        action: "compile_apml"
+        
+      mcp_import_button:
+        text: "🔌 Import via MCP"
+        style: "secondary_button"
+        action: "import_from_mcp"
+        
+      sample_button:
+        text: "📋 Load Sample"
+        style: "tertiary_button"
+        action: "load_sample_apml"
+
+interface trinity_simulator:
+  layout: "railway_70_30_split"
+  
+  show left_panel:
+    title: "🗺️ Trinity Flow Diagram"
+    width: "70%"
+    
+    flow_controls:
+      layout: "horizontal_toolbar"
+      
+      screen_count_badge:
+        text: dynamic # "X screens"
+        style: "green_badge"
+        
+      load_apml_button:
+        text: "📁 Load APML"
+        style: "blue_button"
+        action: "load_apml_files"
+        
+      validation_toggle:
+        text: dynamic # "Show Tech" / "Hide Tech"
+        style: "gray_button"
+        action: "toggle_technical_details"
+    
+    mermaid_flow_diagram:
+      height: "60vh"
+      theme: "dark_cyberpunk"
+      real_time_updates: true
+      interactive_nodes: true
+      trinity_flow_animation: true
+      
+    trinity_assistant_chat:
+      height: "40vh"
+      title: "💬 Trinity Assistant"
+      
+      message_history:
+        scrollable: true
+        message_types: ["user", "system", "trinity"]
+        
+      chat_controls:
+        input_field:
+          placeholder: "How does the flow feel? Any improvements?"
+        send_button:
+          text: "Send"
+          action: "send_chat_message"
+        
+        file_selector:
+          visible: when_files_available
+          action: "select_apml_file"
+  
+  show right_panel:
+    title: "📱 iPhone Simulator"
+    width: "30%"
+    
+    iphone_frame:
+      model: "iPhone_12"
+      dimensions: "390x844px"
+      bezels: true
+      dynamic_island: true
+      
+      compiled_app_simulation:
+        real_time_compilation: true
+        trinity_flow_execution: true
+        
+        current_screen:
+          dynamic_content: compiled_from_apml
+          interactive_elements: true
+          trinity_action_logging: true
+          
+        bottom_navigation:
+          tabs: generated_from_interfaces
+          active_indicator: true
+          
+    validation_panel:
+      title: "✅ Trinity Validation"
+      
+      completeness_score:
+        display: "circular_progress"
+        color: dynamic # red/yellow/green based on score
+        
+      validation_details:
+        dead_ends: count_and_list
+        infinite_loops: count_and_list
+        race_conditions: count_and_list
+        trinity_coverage: percentage
+
+interface dashboard_view:
+  layout: "network_visualization"
+  
+  show network_canvas:
+    title: "Live Behavior Monitor"
+    subtitle: "Real-time app navigation tracking"
+    height: "80vh"
+    
+    physics_simulation:
+      layout_algorithm: "force_directed_clustering"
+      zoom_enabled: true
+      pan_enabled: true
+      
+    interface_nodes:
+      for each interface in compiled_interfaces:
+        node:
+          position: calculated_by_physics
+          size: "adaptive_to_complexity"
+          color: interface_type_color
+          glow_effect: dynamic # based on activity
+          
+          node_content:
+            interface_name: interface.name
+            action_count: interface.actions.count
+            trinity_indicators: show_do_process_icons
+            
+          hover_tooltip:
+            components: interface.compiled_components
+            actions: interface.actions
+            trinity_flows: interface.trinity_connections
+    
+    trinity_connections:
+      for each flow in trinity_flows:
+        connection_arrow:
+          from: flow.fromInterface.position
+          to: flow.toInterface.position
+          path: "curved_bezier"
+          animation: flow.animationState
+          
+          trinity_styling:
+            show_flows: "#06b6d4" # cyan
+            do_flows: "#10b981" # green  
+            process_flows: "#f59e0b" # amber
+            
+          real_time_animation:
+            when: flow.isActive
+            glow_effect: true
+            pulse_speed: "smooth_1s"
+  
+  show validation_sidebar:
+    title: "🔍 Trinity Analysis"
+    width: "20%"
+    
+    completeness_metrics:
+      total_interfaces: Interface.count
+      complete_flows: TrinityFlow.where(complete).count
+      orphaned_interfaces: validation.orphanedInterfaces.count
+      dead_ends: validation.deadEnds.count
+      
+    real_time_validation:
+      auto_update: true
+      validation_alerts: live_feed
+      trinity_violations: highlighted_list
+
+logic apml_processing:
+  
+  process compile_apml_specification:
+    when user clicks parse_button:
+      validate_yaml_syntax(apml_content)
+      extract_interfaces(apml_content)
+      extract_data_models(apml_content) 
+      extract_logic_flows(apml_content)
+      compile_to_simulator_screens()
+      validate_trinity_completeness()
+      generate_mermaid_diagram()
+      redirect to trinity_simulator
+      
+  process trinity_validation:
+    when interfaces_extracted:
+      check_interface_reachability()
+      identify_dead_ends()
+      identify_infinite_loops()
+      detect_race_conditions()
+      validate_show_do_process_patterns()
+      calculate_completeness_score()
+      generate_validation_report()
+      
+  process real_time_compilation:
+    when apml_content_changes:
+      debounce_compilation(500ms)
+      recompile_simulator_screens()
+      update_trinity_flows()
+      refresh_validation_results()
+      animate_flow_diagram_updates()
+
+logic trinity_interaction:
+  
+  process simulator_action_execution:
+    when user clicks action_button in iphone_simulator:
+      log_trinity_message("user_to_system", action.label)
+      execute_action_logic(action)
+      
+      if action.nextScreenId:
+        animate_screen_transition(action.nextScreenId)
+        light_up_flow_connection(current_screen, action.nextScreenId)
+        log_trinity_message("system_to_user", "screen_displayed")
+        update_mermaid_diagram_highlight()
+      
+      log_trinity_message("system_to_system", "action_processed")
+      add_to_technical_log(action, timestamp)
+      
+  process flow_diagram_interaction:
+    when user clicks interface_node in mermaid_diagram:
+      highlight_node(clicked_interface)
+      animate_connections_from(clicked_interface)
+      navigate_simulator_to(clicked_interface)
+      show_interface_details_in_chat()
+      
+  process real_time_trinity_animation:
+    when trinity_flow_triggered:
+      identify_message_type(flow.trinityType)
+      animate_flow_connection(flow.fromInterface, flow.toInterface)
+      update_validation_metrics()
+      stream_trinity_messages_to_chat()
+
+logic validation_engine:
+  
+  process dead_end_detection:
+    when validation_requested:
+      for each interface in interfaces:
+        if interface.outgoing_actions.empty:
+          mark_as_dead_end(interface)
+          suggest_fix("Add navigation action or mark as terminal screen")
+          
+  process infinite_loop_detection:
+    when validation_requested:
+      build_interface_graph()
+      detect_cycles_in_graph()
+      for each cycle in detected_cycles:
+        if cycle.has_no_exit_condition:
+          mark_as_infinite_loop(cycle)
+          suggest_fix("Add conditional exit or user choice")
+          
+  process trinity_pattern_validation:
+    when flow_analyzed:
+      for each user_action in interface.actions:
+        validate_show_pattern(action.triggers_display)
+        validate_do_pattern(action.user_interaction)
+        validate_process_pattern(action.backend_processing)
+        
+        if missing_any_trinity_component:
+          mark_trinity_incomplete(action)
+          suggest_trinity_completion(action)
+
+logic mcp_integration:
+  
+  process import_from_claude_desktop:
+    when user clicks mcp_import_button:
+      connect_to_mcp_server()
+      request_apml_content_from_claude()
+      validate_mcp_connection()
+      import_apml_to_editor()
+      auto_trigger_compilation()
+      
+  process export_compilation_results:
+    when compilation_complete:
+      prepare_mcp_response(compilation_result)
+      send_validation_feedback_to_claude()
+      export_executable_flows()
+      
+  process real_time_mcp_collaboration:
+    when claude_suggests_changes:
+      highlight_suggested_modifications()
+      show_impact_preview()
+      allow_one_click_acceptance()
+
+logic quality_assurance:
+  
+  process railway_aesthetics_validation:
+    when ui_compiled:
+      validate_color_palette(railway_theme)
+      check_component_consistency()
+      verify_animation_smoothness()
+      ensure_responsive_design()
+      
+  process trinity_completeness_scoring:
+    when validation_complete:
+      calculate_show_pattern_coverage()
+      calculate_do_pattern_coverage() 
+      calculate_process_pattern_coverage()
+      
+      completeness_score = (show_coverage + do_coverage + process_coverage) / 3
+      
+      if completeness_score >= 95:
+        mark_as_trinity_complete()
+      else:
+        generate_improvement_suggestions()
