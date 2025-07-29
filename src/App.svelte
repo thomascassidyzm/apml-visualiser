@@ -10,6 +10,8 @@
   import './app.css';
   
   let showInputPopup = false;
+  let apmlInput = '';
+  let isProcessing = false;
 
   const routes = {
     '/': TrinitySimulatorDashboard,
@@ -20,6 +22,79 @@
 
   // Note: Auto-loading is disabled to show APML input screen first
   // Users can now paste sophisticated APML via the input screen
+  
+  function handleAPMLSubmit() {
+    if (!apmlInput.trim() || isProcessing) return;
+    
+    isProcessing = true;
+    
+    try {
+      console.log('🔄 Parsing APML:', apmlInput.substring(0, 100) + '...');
+      
+      // Check if this is sorting logic or other APML format
+      if (apmlInput.includes('sort by:') || apmlInput.includes('if sort is')) {
+        // Create a simple interface structure for sorting logic
+        const sortingAPML = createSortingInterface(apmlInput);
+        const parseSuccess = apmlStore.parseAPML(sortingAPML);
+        
+        if (parseSuccess) {
+          console.log('✅ Sorting APML converted and parsed successfully');
+          showInputPopup = false;
+          apmlInput = '';
+        } else {
+          console.error('❌ Failed to parse converted sorting APML');
+          alert('Failed to parse sorting logic. Check console for details.');
+        }
+      } else {
+        // Try normal APML parsing
+        const parseSuccess = apmlStore.parseAPML(apmlInput);
+        
+        if (parseSuccess) {
+          console.log('✅ APML parsed successfully');
+          showInputPopup = false;
+          apmlInput = '';
+        } else {
+          console.error('❌ Failed to parse APML');
+          alert('Failed to parse APML. Expected format:\n\ninterface screen_name:\n  layout: "default"\n  show button: text: "Click me"\n\nlogic flows:\n  process action: when user clicks button:\n    redirect to next_screen');
+        }
+      }
+    } catch (error) {
+      console.error('❌ Error parsing APML:', error);
+      alert('Error parsing APML: ' + error.message + '\n\nCheck console for details.');
+    } finally {
+      isProcessing = false;
+    }
+  }
+  
+  function createSortingInterface(sortingLogic) {
+    // Convert sorting logic into proper APML interface format
+    return `interface sorting_screen:
+  layout: "list"
+  show sort_newest_button: text: "Newest First"
+  show sort_oldest_button: text: "Oldest First"  
+  show sort_highest_button: text: "Highest Rated"
+  show sort_lowest_button: text: "Lowest Rated"
+  show sort_helpful_button: text: "Most Helpful"
+
+interface results_screen:
+  layout: "list"
+  show results_list: text: "Sorted Results"
+  show back_button: text: "Back to Sort"
+
+logic sorting_flow:
+  process sort_newest: when user clicks sort_newest_button:
+    redirect to results_screen
+  process sort_oldest: when user clicks sort_oldest_button:
+    redirect to results_screen
+  process sort_highest: when user clicks sort_highest_button:
+    redirect to results_screen
+  process sort_lowest: when user clicks sort_lowest_button:
+    redirect to results_screen
+  process sort_helpful: when user clicks sort_helpful_button:
+    redirect to results_screen
+  process go_back: when user clicks back_button:
+    redirect to sorting_screen`;
+  }
 </script>
 
 <main class="min-h-screen bg-gray-900 text-white">
@@ -76,6 +151,7 @@
         
         <div class="space-y-4">
           <textarea 
+            bind:value={apmlInput}
             placeholder="Paste your APML code here..."
             class="w-full h-64 bg-gray-800 border border-gray-600 rounded text-white p-3 text-sm font-mono resize-none focus:outline-none focus:border-blue-500"
           ></textarea>
@@ -84,11 +160,16 @@
             <button 
               on:click={() => showInputPopup = false}
               class="px-4 py-2 bg-gray-600 hover:bg-gray-700 text-white rounded transition-colors"
+              disabled={isProcessing}
             >
               Cancel
             </button>
-            <button class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors">
-              Parse & Visualize
+            <button 
+              on:click={handleAPMLSubmit}
+              class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50"
+              disabled={isProcessing || !apmlInput.trim()}
+            >
+              {isProcessing ? 'Processing...' : 'Parse & Visualize'}
             </button>
           </div>
         </div>
