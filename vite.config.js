@@ -6,7 +6,7 @@ export default defineConfig({
   base: './', // Use relative paths for static deployment
   server: {
     proxy: {
-      // Proxy API requests to Express server
+      // Proxy API requests to Express server (dev only)
       '/api': {
         target: 'http://localhost:3003',
         changeOrigin: true,
@@ -15,6 +15,7 @@ export default defineConfig({
     }
   },
   build: {
+    outDir: 'dist',
     rollupOptions: {
       output: {
         manualChunks: undefined

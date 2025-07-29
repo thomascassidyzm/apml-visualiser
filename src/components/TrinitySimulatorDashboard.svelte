@@ -8,10 +8,11 @@
   let connectionStatus = 'disconnected';
   let messages = [];
   let chatInput = '';
+  let changeRequests = [];
+  let currentApmlContent = '';
   let selectedScreen = null;
   let currentApml = null;
   let simulatorScreens = [];
-  let technicalDetails = false;
   let flowDiagram = '';
   let messageSequence = [];
   let availableApmlFiles = [];
@@ -284,6 +285,13 @@
   function generateIntelligentResponse(userMessage) {
     const message = userMessage.toLowerCase();
     
+    // Detect and process change requests automatically
+    const changeRequest = analyzeUserFeedback(userMessage);
+    if (changeRequest) {
+      changeRequests = [...changeRequests, changeRequest];
+      return generateChangeRequestResponse(changeRequest);
+    }
+    
     if (message.includes('beautiful') || message.includes('aesthetic')) {
       return '✨ The simulator aesthetics are inspired by the Railway app - dark theme, iPhone-style layouts, and smooth animations!';
     } else if (message.includes('flow') || message.includes('diagram')) {
@@ -292,9 +300,212 @@
       return '🔍 Trinity validation checks APML structure, syntax, and flow completeness with detailed feedback.';
     } else if (message.includes('compile') || message.includes('generate')) {
       return '🚀 Trinity can compile your APML to Vue, Svelte, or generate beautiful simulator screens automatically!';
+    } else if (message.includes('export') || message.includes('download')) {
+      return generateExportResponse();
+    } else if (message.includes('help') || message.includes('how') || message.includes('guide')) {
+      return generateHelpResponse();
     } else {
       return `Thanks for the feedback: "${userMessage}". Trinity combines beautiful design with powerful APML validation and compilation!`;
     }
+  }
+
+  function analyzeUserFeedback(userMessage) {
+    const message = userMessage.toLowerCase();
+    let changeRequest = null;
+    
+    // Pattern matching for different types of feedback
+    const patterns = [
+      {
+        pattern: /(?:when i click|clicked|press|tap)\s+([^,]+)\s+(?:but|and|however)\s+(?:expected|wanted|should)\s+(.+)/i,
+        type: 'interaction_expectation',
+        extractData: (match) => ({ action: match[1].trim(), expectation: match[2].trim() })
+      },
+      {
+        pattern: /(?:the|this)\s+(\w+)\s+(?:screen|interface|page)\s+(?:should|needs to|must)\s+(.+)/i,
+        type: 'screen_requirement',
+        extractData: (match) => ({ screen: match[1].trim(), requirement: match[2].trim() })
+      },
+      {
+        pattern: /(?:missing|need|want|add)\s+(?:a|an)?\s*([^.!?]+)/i,
+        type: 'missing_feature',
+        extractData: (match) => ({ feature: match[1].trim() })
+      },
+      {
+        pattern: /(?:remove|delete|don't need|unnecessary)\s+([^.!?]+)/i,
+        type: 'remove_feature',
+        extractData: (match) => ({ feature: match[1].trim() })
+      },
+      {
+        pattern: /(?:change|modify|update)\s+([^.!?]+)\s+(?:to|into)\s+([^.!?]+)/i,
+        type: 'change_request',
+        extractData: (match) => ({ from: match[1].trim(), to: match[2].trim() })
+      }
+    ];
+    
+    for (const { pattern, type, extractData } of patterns) {
+      const match = userMessage.match(pattern);
+      if (match) {
+        const extractedData = extractData(match);
+        changeRequest = {
+          id: `cr_${Date.now()}`,
+          type,
+          originalMessage: userMessage,
+          data: extractedData,
+          timestamp: new Date().toISOString(),
+          status: 'pending',
+          apmlSection: identifyApmlSection(extractedData, type),
+          crSyntax: generateCRSyntax(type, extractedData, userMessage)
+        };
+        break;
+      }
+    }
+    
+    return changeRequest;
+  }
+  
+  function identifyApmlSection(data, type) {
+    // Correlate feedback to specific APML sections
+    if (!currentApmlContent) return null;
+    
+    let section = null;
+    const lines = currentApmlContent.split('\n');
+    
+    switch (type) {
+      case 'interaction_expectation':
+      case 'screen_requirement':
+        // Find screen/interface definitions
+        const screenName = data.screen || data.action;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].includes(screenName) || lines[i].includes('interface') || lines[i].includes('screen')) {
+            section = { lineStart: i + 1, lineEnd: i + 10, context: 'interface_definition' };
+            break;
+          }
+        }
+        break;
+      case 'missing_feature':
+      case 'remove_feature':
+        // Find relevant component or pattern sections
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].includes('components:') || lines[i].includes('patterns:')) {
+            section = { lineStart: i + 1, lineEnd: i + 20, context: 'component_section' };
+            break;
+          }
+        }
+        break;
+      case 'change_request':
+        // Find the specific element to change
+        const searchTerm = data.from;
+        for (let i = 0; i < lines.length; i++) {
+          if (lines[i].toLowerCase().includes(searchTerm.toLowerCase())) {
+            section = { lineStart: i + 1, lineEnd: i + 5, context: 'specific_element' };
+            break;
+          }
+        }
+        break;
+    }
+    
+    return section;
+  }
+  
+  function generateCRSyntax(type, data, originalMessage) {
+    const timestamp = new Date().toISOString().split('T')[0];
+    const crId = `CR${Date.now().toString().slice(-6)}`;
+    
+    switch (type) {
+      case 'interaction_expectation':
+        return `# [${crId}] INTERACTION FEEDBACK (${timestamp})\n# User: "${originalMessage}"\n# Expected: ${data.expectation} when ${data.action}\n# Priority: HIGH\n# Status: PENDING`;
+      case 'screen_requirement':
+        return `# [${crId}] SCREEN ENHANCEMENT (${timestamp})\n# User: "${originalMessage}"\n# Screen: ${data.screen}\n# Requirement: ${data.requirement}\n# Priority: MEDIUM\n# Status: PENDING`;
+      case 'missing_feature':
+        return `# [${crId}] MISSING FEATURE (${timestamp})\n# User: "${originalMessage}"\n# Feature: ${data.feature}\n# Priority: MEDIUM\n# Status: PENDING`;
+      case 'remove_feature':
+        return `# [${crId}] REMOVE FEATURE (${timestamp})\n# User: "${originalMessage}"\n# Feature: ${data.feature}\n# Priority: LOW\n# Status: PENDING`;
+      case 'change_request':
+        return `# [${crId}] CHANGE REQUEST (${timestamp})\n# User: "${originalMessage}"\n# Change: ${data.from} → ${data.to}\n# Priority: MEDIUM\n# Status: PENDING`;
+      default:
+        return `# [${crId}] GENERAL FEEDBACK (${timestamp})\n# User: "${originalMessage}"\n# Priority: LOW\n# Status: PENDING`;
+    }
+  }
+  
+  function generateChangeRequestResponse(changeRequest) {
+    const responses = {
+      interaction_expectation: `🎯 **Interaction Feedback Captured**\n\nI've logged your expectation: "${changeRequest.data.expectation}" when ${changeRequest.data.action}.\n\n✅ Change Request ${changeRequest.id} created\n📍 Correlated to: ${changeRequest.apmlSection?.context || 'General interface'}\n🔄 Status: Ready for APML export with embedded CR`,
+      screen_requirement: `📱 **Screen Enhancement Noted**\n\nRequirement for ${changeRequest.data.screen} screen: "${changeRequest.data.requirement}"\n\n✅ Change Request ${changeRequest.id} created\n📍 Correlated to: ${changeRequest.apmlSection?.context || 'Screen definition'}\n🔄 Status: Ready for APML export with embedded CR`,
+      missing_feature: `➕ **Missing Feature Identified**\n\nFeature to add: "${changeRequest.data.feature}"\n\n✅ Change Request ${changeRequest.id} created\n📍 Correlated to: ${changeRequest.apmlSection?.context || 'Component section'}\n🔄 Status: Ready for APML export with embedded CR`,
+      remove_feature: `➖ **Feature Removal Noted**\n\nFeature to remove: "${changeRequest.data.feature}"\n\n✅ Change Request ${changeRequest.id} created\n📍 Correlated to: ${changeRequest.apmlSection?.context || 'Component section'}\n🔄 Status: Ready for APML export with embedded CR`,
+      change_request: `🔄 **Change Request Captured**\n\nChange: "${changeRequest.data.from}" → "${changeRequest.data.to}"\n\n✅ Change Request ${changeRequest.id} created\n📍 Correlated to: ${changeRequest.apmlSection?.context || 'Specific element'}\n🔄 Status: Ready for APML export with embedded CR`
+    };
+    
+    return responses[changeRequest.type] || `📝 **Feedback Captured**\n\n✅ Change Request ${changeRequest.id} created\n🔄 Status: Ready for APML export with embedded CR`;
+  }
+  
+  function generateExportResponse() {
+    if (changeRequests.length === 0) {
+      return '📄 **Export Ready**\n\nOriginal APML available for export. No change requests captured yet. Try providing specific feedback like "When I click Send, I expected it to go to Settings" to generate embedded CRs.';
+    }
+    
+    return `📤 **Export with ${changeRequests.length} Change Requests**\n\n🔄 ${changeRequests.length} change requests embedded in APML\n📋 Ready for LLM iteration feedback loop\n\n**Use the Export button to download APML with embedded CRs for pasting back into your LLM conversation.**`;
+  }
+  
+  function exportApmlWithChangeRequests() {
+    if (!currentApmlContent) {
+      addMessage('system', '❌ No APML content loaded. Please load an APML file first.');
+      return;
+    }
+    
+    let exportContent = currentApmlContent;
+    
+    if (changeRequests.length > 0) {
+      // Add header comment with summary
+      const headerComment = `# =============================================================================\n# TRINITY APML EXPORT WITH EMBEDDED CHANGE REQUESTS\n# Generated: ${new Date().toISOString()}\n# Change Requests: ${changeRequests.length}\n# =============================================================================\n\n`;
+      
+      // Embed change requests inline based on their identified APML sections
+      changeRequests.forEach(cr => {
+        if (cr.apmlSection && cr.apmlSection.lineStart) {
+          // Insert CR comment before the identified line
+          const lines = exportContent.split('\n');
+          const insertIndex = cr.apmlSection.lineStart - 1;
+          if (insertIndex >= 0 && insertIndex < lines.length) {
+            lines.splice(insertIndex, 0, '', cr.crSyntax, '');
+            exportContent = lines.join('\n');
+          }
+        } else {
+          // Add at the end if no specific section identified
+          exportContent += `\n\n${cr.crSyntax}\n`;
+        }
+      });
+      
+      exportContent = headerComment + exportContent;
+      
+      // Add footer with LLM iteration instructions
+      const footerComment = `\n\n# =============================================================================\n# LLM ITERATION INSTRUCTIONS\n# =============================================================================\n# 1. Review the embedded change requests (marked with [CR######])\n# 2. Apply the requested changes to improve the APML\n# 3. Remove the CR comments after implementing changes\n# 4. Test the updated APML in Trinity APML Visualiser\n#\n# Trinity Feedback Loop: User Test → Chat Feedback → CR Export → LLM Update → Repeat\n# =============================================================================`;
+      
+      exportContent += footerComment;
+      
+      addMessage('system', `📤 **Exported APML with ${changeRequests.length} embedded change requests**`);
+    } else {
+      addMessage('system', '📄 **Exported original APML** (no change requests to embed)');
+    }
+    
+    // Create and download file
+    const filename = `trinity-apml-export-${Date.now()}.apml`;
+    const blob = new Blob([exportContent], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    
+    addMessage('system', `✅ **Download started**: \`${filename}\``);
+    addMessage('system', '🔄 **Ready for LLM iteration**: Paste the exported content into your LLM conversation to implement the change requests!');
+  }
+  
+  function generateHelpResponse() {
+    return `🎆 **Trinity Chat-Based Feedback System Help**\n\n**How to Use:**\n1. 🗣️ Give natural feedback: "When I click Send, I expected it to go to Settings"\n2. 🔄 Trinity auto-generates change requests with embedded APML comments\n3. 📤 Export APML with embedded CRs using the button below\n4. 🤖 Paste exported APML into your LLM conversation for iteration\n\n**Example Feedback:**\n• "The chat screen needs a notification badge"\n• "Remove the unnecessary upload button"\n• "Change 'Send Message' to 'Post Update'"\n\n**LLM Iteration Loop:** User Test → Chat Feedback → CR Export → LLM Update → Repeat`;
   }
 
   function generateSimulatorFromApml(apmlData) {
@@ -653,6 +864,9 @@
       }
       
       if (fileData.success) {
+        // Store raw APML content for CR correlation
+        currentApmlContent = fileData.content || '';
+        
         // Use our APML store parser instead of expecting YAML format
         const parseSuccess = apmlStore.parseAPML(fileData.content);
         
@@ -693,6 +907,11 @@
               generateFlowDiagram();
               addMessage('system', `✨ Successfully loaded ${simulatorScreens.length} interfaces from ${filename}!`);
               addMessage('system', `🔗 Main Visualiser Dashboard updated! Check the Dashboard tab.`);
+              
+              // Clear previous change requests and activate feedback system
+              changeRequests = [];
+              addMessage('system', '💬 **Chat-based feedback system active!** Try: "When I click Send, I expected it to go to Settings" or "The chat screen needs a notification badge"');
+              
               showFileSelector = false;
             }
           } else {
@@ -1884,26 +2103,9 @@
       <div class="h-4/5">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-xl font-semibold">🗺️ Trinity Flow Diagram</h2>
-          <div class="flex items-center space-x-2">
-            <button on:click={loadAvailableApmlFiles} class="px-4 py-2 bg-blue-600 hover:bg-blue-700 rounded text-sm transition-colors text-white font-medium">
-              📁 Load APML
-            </button>
-            <button on:click={exportValidatedAPML} class="px-4 py-2 bg-green-600 hover:bg-green-700 rounded text-sm transition-colors text-white font-medium">
-              📤 Export
-            </button>
-            <button on:click={importFromMCP} class="px-4 py-2 bg-purple-600 hover:bg-purple-700 rounded text-sm transition-colors text-white font-medium">
-              🔌 MCP
-            </button>
-            <button 
-              on:click={() => trinityStateMonitor.isActive ? stopTrinityMonitoring() : startTrinityMonitoring()} 
-              class="px-4 py-2 {trinityStateMonitor.isActive ? 'bg-orange-600 hover:bg-orange-700' : 'bg-cyan-600 hover:bg-cyan-700'} rounded text-sm transition-colors text-white font-medium"
-            >
-              {trinityStateMonitor.isActive ? '⏹️ Stop' : '▶️ Monitor'}
-            </button>
-            <button on:click={() => technicalDetails = !technicalDetails} class="px-4 py-2 bg-gray-600 hover:bg-gray-700 rounded text-sm transition-colors text-white font-medium">
-              {technicalDetails ? '👁️ Hide' : '🔧 Tech'}
-            </button>
-          </div>
+          <button on:click={loadAvailableApmlFiles} class="px-6 py-2 bg-blue-600 hover:bg-blue-700 rounded-lg text-white font-medium transition-colors">
+            📁 Load APML
+          </button>
         </div>
         
         <div class="h-full p-6 bg-gray-900 rounded-lg border border-gray-600">
@@ -1917,13 +2119,6 @@
             <div class="text-center text-gray-400 mt-20">
               <div class="text-6xl mb-4">🔄</div>
               <p class="mb-6">Load APML to see beautiful flow diagram</p>
-              <!-- BIG OBVIOUS LOAD BUTTON -->
-              <button 
-                on:click={loadAvailableApmlFiles}
-                class="px-8 py-4 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-              >
-                📁 Load Your APML Files
-              </button>
             </div>
           {/if}
         </div>
@@ -1958,6 +2153,24 @@
           </div>
         {/if}
 
+        <!-- Change Requests Summary -->
+        {#if changeRequests.length > 0}
+          <div class="mb-4 p-3 bg-green-900 border border-green-600 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-green-300 font-medium">🔄 {changeRequests.length} Change Request{changeRequests.length === 1 ? '' : 's'}</span>
+              <span class="text-xs text-green-400">Ready for export</span>
+            </div>
+            <div class="text-xs text-green-400 space-y-1">
+              {#each changeRequests.slice(0, 3) as cr}
+                <div class="truncate">• {cr.type.replace('_', ' ')}: {cr.originalMessage.slice(0, 40)}...</div>
+              {/each}
+              {#if changeRequests.length > 3}
+                <div class="text-green-500">... and {changeRequests.length - 3} more</div>
+              {/if}
+            </div>
+          </div>
+        {/if}
+        
         <!-- Chat History -->
         <div class="space-y-2 mb-4 max-h-32 overflow-y-auto">
           {#each messages as message (message.id)}
@@ -1969,11 +2182,11 @@
         </div>
         
         <!-- Chat Input -->
-        <div class="flex">
+        <div class="flex mb-2">
           <input
             bind:value={chatInput}
             on:keydown={(e) => e.key === 'Enter' && sendChatMessage()}
-            placeholder="How does the flow feel? Any improvements?"
+            placeholder="Try: 'When I click Send, I expected it to go to Settings' (type 'help' for guide)"
             class="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-l text-sm text-white focus:outline-none focus:border-blue-500"
           />
           <button
@@ -1982,6 +2195,28 @@
           >
             Send
           </button>
+        </div>
+        
+        <!-- Export Button -->
+        <div class="flex gap-2">
+          <button
+            on:click={exportApmlWithChangeRequests}
+            class="flex-1 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            class:opacity-50={!currentApmlContent}
+            disabled={!currentApmlContent}
+          >
+            <span>📤</span>
+            Export APML + CRs ({changeRequests.length})
+          </button>
+          {#if changeRequests.length > 0}
+            <button
+              on:click={() => { changeRequests = []; addMessage('system', '🗑️ Change requests cleared'); }}
+              class="px-3 py-2 bg-red-600 hover:bg-red-700 text-white rounded text-sm transition-colors"
+              title="Clear all change requests"
+            >
+              🗑️
+            </button>
+          {/if}
         </div>
       </div>
     </div>
@@ -1994,13 +2229,6 @@
           <div class="text-center text-gray-400">
             <div class="text-6xl mb-4">📱</div>
             <p class="mb-4">Load APML to see simulator</p>
-            <!-- ANOTHER BIG OBVIOUS LOAD BUTTON -->
-            <button 
-              on:click={loadAvailableApmlFiles}
-              class="px-6 py-3 bg-green-600 hover:bg-green-700 text-white rounded-lg font-semibold transition-all duration-200 shadow-lg hover:shadow-xl"
-            >
-              📁 Load APML Files
-            </button>
           </div>
         {:else}
           <!-- Real iPhone 12 Size: 390x844px -->
@@ -2146,8 +2374,8 @@
         {/if}
       </div>
       
-      <!-- Technical Details -->
-      {#if technicalDetails}
+      <!-- Technical Details Removed -->
+      {#if false}
         <div class="border-t border-gray-700 pt-4">
           <h3 class="text-lg font-semibold mb-4">🔧 Technical Details</h3>
           

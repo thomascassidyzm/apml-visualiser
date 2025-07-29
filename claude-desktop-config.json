@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "trinity-apml-visualiser": {
+      "command": "node",
+      "args": ["/Users/tomcassidy/APML/APML-Projects/apml-visualiser/trinity-apml-visualiser-mcp-server.js"],
+      "env": {}
+    }
+  }
+}
