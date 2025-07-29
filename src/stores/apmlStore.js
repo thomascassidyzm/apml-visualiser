@@ -126,29 +126,53 @@ export const apmlStore = {
 // Helper functions for APML parsing
 function extractInterfaces(content) {
   const interfaces = [];
-  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|$)/gs;
+  
+  // Modern APML format: interface name:
+  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|styles\s+\w+:|animations:|$)/gs;
   let match;
+  
+  console.log('🔍 Extracting interfaces from APML...');
   
   while ((match = interfaceRegex.exec(content)) !== null) {
     const interfaceName = match[1];
     const definition = match[2].trim();
     
+    console.log(`📱 Found interface: ${interfaceName}`, definition.substring(0, 100) + '...');
+    
     // Extract layout information
     const layoutMatch = definition.match(/layout:\s*"([^"]+)"/);
     const layout = layoutMatch ? layoutMatch[1] : 'default';
     
+    // Extract theme and styling info
+    const animationMatch = definition.match(/animation:\s*"([^"]+)"/);
+    const animation = animationMatch ? animationMatch[1] : null;
+    
     // Enhanced action extraction from various APML patterns
     const actions = extractActionsFromInterface(definition, interfaceName);
+    const elements = extractUIElements(definition);
     
     interfaces.push({
       name: interfaceName,
       definition: definition,
       layout: layout,
-      extractedActions: actions
+      animation: animation,
+      extractedActions: actions,
+      extractedElements: elements,
+      complexity: calculateInterfaceComplexity(definition)
     });
   }
   
+  console.log(`✅ Extracted ${interfaces.length} interfaces`);
   return interfaces;
+}
+
+function calculateInterfaceComplexity(definition) {
+  // Count various UI elements to determine complexity
+  const showElements = (definition.match(/show\s+\w+:/g) || []).length;
+  const actions = (definition.match(/action:/g) || []).length;
+  const loops = (definition.match(/for each/g) || []).length;
+  
+  return showElements + (actions * 2) + (loops * 3);
 }
 
 function extractDataModels(content) {
@@ -183,7 +207,7 @@ function extractDataModels(content) {
 
 function extractLogicFlows(content) {
   const flows = [];
-  const logicRegex = /logic\s+(\w+):(.*?)(?=logic\s+\w+:|interface\s+\w+:|data\s+\w+:|$)/gs;
+  const logicRegex = /logic\s+(\w+):(.*?)(?=logic\s+\w+:|interface\s+\w+:|data\s+\w+:|styles\s+\w+:|animations:|$)/gs;
   let match;
   
   console.log('🔍 Extracting logic flows from APML...');
@@ -194,32 +218,84 @@ function extractLogicFlows(content) {
     
     console.log(`📋 Found logic block: ${logicName}`, logicContent);
     
-    // Parse individual processes within this logic block - handle both button names and action names  
-    const processRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+(?:_button)?):\s*redirect\s+to\s+(\w+)/g;
-    // Also try simpler pattern for this APML format
-    const simpleProcessRegex = /process\s+(\w+):/g;
+    // Modern APML patterns
+    // Pattern 1: when user clicks element: redirect to screen
+    const redirectRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+):\s*redirect\s+to\s+(\w+)/g;
     let processMatch;
     
-    while ((processMatch = processRegex.exec(logicContent)) !== null) {
-      const buttonName = processMatch[2];
-      // Convert button name to action (remove _button suffix)
-      const actionName = buttonName.replace('_button', '');
+    while ((processMatch = redirectRegex.exec(logicContent)) !== null) {
+      const processName = processMatch[1];
+      const triggerElement = processMatch[2];
+      const targetScreen = processMatch[3];
       
-      console.log(`🔗 Found process: ${processMatch[1]}, button: ${buttonName}, action: ${actionName}, redirect: ${processMatch[3]}`);
+      console.log(`🔗 Found redirect flow: ${processName}, trigger: ${triggerElement}, target: ${targetScreen}`);
       
       flows.push({
         name: logicName,
-        processName: processMatch[1],
-        trigger: actionName,  // Use action name without _button
-        buttonName: buttonName,  // Keep original button name for interface lookup
-        fromInterface: getInterfaceForButton(content, buttonName),
-        redirectTo: processMatch[3],
-        actionName: processMatch[1]
+        processName: processName,
+        trigger: triggerElement,
+        buttonName: triggerElement,
+        fromInterface: inferFromInterface(logicName, triggerElement),
+        redirectTo: targetScreen,
+        actionName: processName,
+        type: 'navigation'
       });
     }
     
-    // If no specific flows found, create basic flows from process names
+    // Pattern 2: when user clicks element: show modal/overlay
+    const modalRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+):\s*show\s+(modal|overlay):\s*"([^"]+)"/g;
+    while ((processMatch = modalRegex.exec(logicContent)) !== null) {
+      flows.push({
+        name: logicName,
+        processName: processMatch[1],
+        trigger: processMatch[2],
+        buttonName: processMatch[2],
+        fromInterface: inferFromInterface(logicName, processMatch[2]),
+        redirectTo: null,
+        actionName: processMatch[1],
+        type: 'modal',
+        modalType: processMatch[3],
+        modalName: processMatch[4]
+      });
+    }
+    
+    // Pattern 3: State changes (toggle, update, etc.)
+    const stateRegex = /process\s+(\w+):\s*when\s+user\s+clicks\s+(\w+):\s*(toggle|update|set)\s+(.+)/g;
+    while ((processMatch = stateRegex.exec(logicContent)) !== null) {
+      flows.push({
+        name: logicName,
+        processName: processMatch[1],
+        trigger: processMatch[2],
+        buttonName: processMatch[2],
+        fromInterface: inferFromInterface(logicName, processMatch[2]),
+        redirectTo: null,
+        actionName: processMatch[1],
+        type: 'state_change',
+        operation: processMatch[3],
+        target: processMatch[4]
+      });
+    }
+    
+    // Pattern 4: Animation/effect triggers
+    const effectRegex = /process\s+(\w+):\s*when\s+user\s+(touches|clicks)\s+(.+):\s*animate\s+with\s+"([^"]+)"/g;
+    while ((processMatch = effectRegex.exec(logicContent)) !== null) {
+      flows.push({
+        name: logicName,
+        processName: processMatch[1],
+        trigger: processMatch[3],
+        buttonName: processMatch[3],
+        fromInterface: null,
+        redirectTo: null,
+        actionName: processMatch[1],
+        type: 'animation',
+        interaction: processMatch[2],
+        effect: processMatch[4]
+      });
+    }
+    
+    // Fallback: extract process names without specific patterns
     if (flows.filter(f => f.name === logicName).length === 0) {
+      const simpleProcessRegex = /process\s+(\w+):/g;
       let simpleMatch;
       while ((simpleMatch = simpleProcessRegex.exec(logicContent)) !== null) {
         const processName = simpleMatch[1];
@@ -230,7 +306,8 @@ function extractLogicFlows(content) {
           buttonName: `${processName}_button`,
           fromInterface: null,
           redirectTo: null,
-          actionName: processName
+          actionName: processName,
+          type: 'generic'
         });
       }
     }
@@ -238,6 +315,17 @@ function extractLogicFlows(content) {
   
   console.log(`✅ Extracted ${flows.length} logic flows:`, flows);
   return flows;
+}
+
+function inferFromInterface(logicName, triggerElement) {
+  // Try to infer which interface this logic belongs to based on naming patterns
+  if (logicName.includes('dashboard')) return 'dashboard';
+  if (logicName.includes('project')) return 'project_detail';
+  if (logicName.includes('navigation')) {
+    if (triggerElement.includes('project')) return 'dashboard';
+    if (triggerElement.includes('back')) return 'project_detail';
+  }
+  return null;
 }
 
 function getInterfaceForButton(content, buttonName) {
@@ -295,19 +383,73 @@ function determineLayoutType(definition, interfaceName) {
 function extractUIElements(definition) {
   const elements = [];
   
-  // Extract show elements that become UI components
-  const showRegex = /show\s+(\w+):\s*text:\s*"([^"]+)"/g;
+  // Pattern 1: show elements with complex nested structures
+  const showRegex = /show\s+(\w+):(.*?)(?=show\s+\w+:|$)/gs;
   let match;
+  
   while ((match = showRegex.exec(definition)) !== null) {
+    const elementName = match[1];
+    const elementDef = match[2];
+    
+    // Determine element type based on name and content
+    let type = 'component';
+    if (elementName.includes('button')) type = 'button';
+    else if (elementName.includes('header')) type = 'header';
+    else if (elementName.includes('nav')) type = 'navigation';
+    else if (elementName.includes('content')) type = 'content';
+    else if (elementName.includes('bar')) type = 'bar';
+    else if (elementName.includes('grid') || elementName.includes('list')) type = 'list';
+    
+    // Extract nested actions
+    const actions = extractActionsFromDefinition(elementDef);
+    
+    // Extract text content
+    const textMatch = elementDef.match(/text:\s*"([^"]+)"/);
+    const titleMatch = elementDef.match(/title:\s*"([^"]+)"/);
+    const iconMatch = elementDef.match(/icon:\s*"([^"]+)"/);
+    
     elements.push({
-      type: match[1].includes('button') ? 'button' : 'text',
-      id: match[1],
-      text: match[2],
-      interactive: match[1].includes('button')
+      type: type,
+      id: elementName,
+      text: textMatch ? textMatch[1] : (titleMatch ? titleMatch[1] : ''),
+      icon: iconMatch ? iconMatch[1] : null,
+      interactive: actions.length > 0 || type === 'button',
+      actions: actions,
+      hasNestedElements: elementDef.includes('for each') || elementDef.includes('layout:'),
+      complexity: calculateElementComplexity(elementDef)
     });
   }
   
   return elements;
+}
+
+function extractActionsFromDefinition(definition) {
+  const actions = [];
+  
+  // Extract action definitions
+  const actionRegex = /(\w+):\s*(?:icon:\s*"([^"]+)"|action:\s*"([^"]+)"|text:\s*"([^"]+)")/g;
+  let match;
+  
+  while ((match = actionRegex.exec(definition)) !== null) {
+    if (match[1].includes('button') || match[3]) { // Has action or is a button
+      actions.push({
+        name: match[1],
+        action: match[3] || match[1],
+        icon: match[2],
+        text: match[4]
+      });
+    }
+  }
+  
+  return actions;
+}
+
+function calculateElementComplexity(definition) {
+  const nested = (definition.match(/\w+:/g) || []).length;
+  const loops = (definition.match(/for each/g) || []).length;
+  const conditionals = (definition.match(/if\s+/g) || []).length;
+  
+  return nested + (loops * 2) + (conditionals * 2);
 }
 
 function generateMessageFlows(logicFlows) {

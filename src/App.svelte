@@ -31,9 +31,9 @@
     try {
       console.log('🔄 Parsing APML:', apmlInput.substring(0, 100) + '...');
       
-      // Check if this is sorting logic or other APML format
+      // Check for different APML formats and handle appropriately
       if (apmlInput.includes('sort by:') || apmlInput.includes('if sort is')) {
-        // Create a simple interface structure for sorting logic
+        // Legacy sorting logic format
         const sortingAPML = createSortingInterface(apmlInput);
         const parseSuccess = apmlStore.parseAPML(sortingAPML);
         
@@ -45,8 +45,21 @@
           console.error('❌ Failed to parse converted sorting APML');
           alert('Failed to parse sorting logic. Check console for details.');
         }
+      } else if (apmlInput.includes('app ') && apmlInput.includes('interface ')) {
+        // Modern APML format (like Zenflow)
+        console.log('🎨 Detected modern APML format with app definition');
+        const parseSuccess = apmlStore.parseAPML(apmlInput);
+        
+        if (parseSuccess) {
+          console.log('✅ Modern APML parsed successfully');
+          showInputPopup = false;
+          apmlInput = '';
+        } else {
+          console.error('❌ Failed to parse modern APML');
+          alert('Failed to parse APML. Check console for detailed error information.');
+        }
       } else {
-        // Try normal APML parsing
+        // Try standard APML parsing
         const parseSuccess = apmlStore.parseAPML(apmlInput);
         
         if (parseSuccess) {
@@ -55,7 +68,7 @@
           apmlInput = '';
         } else {
           console.error('❌ Failed to parse APML');
-          alert('Failed to parse APML. Expected format:\n\ninterface screen_name:\n  layout: "default"\n  show button: text: "Click me"\n\nlogic flows:\n  process action: when user clicks button:\n    redirect to next_screen');
+          alert('Failed to parse APML. Supported formats:\n\n1. Modern APML (app name: + interface blocks)\n2. Standard APML (interface + logic blocks)\n3. Legacy sorting logic\n\nCheck console for detailed errors.');
         }
       }
     } catch (error) {
