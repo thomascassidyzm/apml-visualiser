@@ -31,9 +31,9 @@
     try {
       console.log('🔄 Compiling APML via MCP server:', apmlInput.substring(0, 100) + '...');
       
-      // Send ALL APML directly to state-of-the-art MCP compiler
-      console.log('🚀 Sending APML to state-of-the-art MCP compiler for parsing + compilation');
-      await compileAPMLWithMCP(apmlInput);
+      // Build real app directly with MCP server
+      console.log('🚀 Building real app with MCP compiler...');
+      await buildRealAppWithMCP(apmlInput);
     } catch (error) {
       console.error('❌ Error compiling APML:', error);
       console.error('Error compiling APML:', error.message);
@@ -42,7 +42,7 @@
     }
   }
   
-  async function compileAPMLWithMCP(apmlContent) {
+  async function buildRealAppWithMCP(apmlContent) {
     console.log('🚀 Calling MCP server for APML compilation...');
     
     try {
@@ -87,15 +87,12 @@
           mcpServerUrl: 'https://web-production-1136.up.railway.app'
         };
         
-        // Get parsed AST data from state-of-the-art MCP server
-        await getMCPParsedAPML(apmlContent);
-        
+        // Show real app in simulator and extract flow nodes from compiled code
         showInputPopup = false;
         apmlInput = '';
-        console.log('🎯 Trinity updated with MCP-parsed APML data');
         
-        // Trinity will automatically show the compilation results in the UI
-        console.log(`🎉 SUCCESS! APML compiled to working ${appName} via state-of-the-art MCP!`);
+        // Trinity will show the real app running + extract flow from the code
+        console.log(`🎉 SUCCESS! Real app built: ${appName} - Running in iPhone simulator!`);
       } else {
         throw new Error('Unexpected compilation result format');
       }
@@ -106,50 +103,6 @@
     }
   }
   
-  async function getMCPParsedAPML(apmlContent) {
-    console.log('🔍 Getting parsed APML data from state-of-the-art MCP server...');
-    
-    try {
-      const response = await fetch('https://web-production-1136.up.railway.app/compile', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          tool: 'parse_apml',
-          arguments: {
-            apml_content: apmlContent
-          }
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error(`MCP parser error: ${response.status} ${response.statusText}`);
-      }
-
-      const parseResult = await response.json();
-      console.log('✅ MCP parsing successful:', parseResult);
-      
-      if (parseResult && parseResult.content && parseResult.content.length > 1) {
-        // Extract the AST data from the second content item (JSON)
-        const astData = JSON.parse(parseResult.content[1].text);
-        console.log('🎯 Received AST from MCP server:', astData);
-        
-        // Use MCP-parsed data to populate Trinity's store directly
-        apmlStore.setMCPParsedData(astData);
-        
-        return true;
-      } else {
-        throw new Error('Unexpected parse result format from MCP server');
-      }
-      
-    } catch (error) {
-      console.error('❌ MCP parsing failed:', error);
-      // Fallback to local parser if MCP fails
-      console.log('🔄 Falling back to local parser...');
-      return apmlStore.parseAPML(apmlContent);
-    }
-  }
   
   function createSortingInterface(sortingLogic) {
     // Convert sorting logic into proper APML interface format
@@ -206,7 +159,7 @@ logic sorting_flow:
             on:click={() => showInputPopup = true}
             class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition-colors text-sm font-medium"
           >
-            📝 Input APML
+🚀 Build App
           </button>
         </div>
       </div>
@@ -223,7 +176,7 @@ logic sorting_flow:
     <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
       <div class="bg-gray-900 border border-gray-700 rounded-lg p-6 max-w-2xl w-full mx-4 max-h-[70vh] overflow-y-auto">
         <div class="flex justify-between items-center mb-4">
-          <h2 class="text-lg font-semibold text-white">📝 Paste APML</h2>
+          <h2 class="text-lg font-semibold text-white">🚀 Build Real App from APML</h2>
           <button 
             on:click={() => showInputPopup = false}
             class="text-gray-400 hover:text-white transition-colors"
@@ -254,7 +207,7 @@ logic sorting_flow:
               class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded transition-colors disabled:opacity-50"
               disabled={isProcessing || !apmlInput.trim()}
             >
-              {isProcessing ? 'Processing...' : 'Parse & Visualize'}
+              {isProcessing ? 'Building App...' : 'Build Real App'}
             </button>
           </div>
         </div>
