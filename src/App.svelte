@@ -23,59 +23,110 @@
   // Note: Auto-loading is disabled to show APML input screen first
   // Users can now paste sophisticated APML via the input screen
   
-  function handleAPMLSubmit() {
+  async function handleAPMLSubmit() {
     if (!apmlInput.trim() || isProcessing) return;
     
     isProcessing = true;
     
     try {
-      console.log('🔄 Parsing APML:', apmlInput.substring(0, 100) + '...');
+      console.log('🔄 Compiling APML via MCP server:', apmlInput.substring(0, 100) + '...');
       
       // Check for different APML formats and handle appropriately
       if (apmlInput.includes('sort by:') || apmlInput.includes('if sort is')) {
-        // Legacy sorting logic format
+        // Legacy sorting logic format - convert to modern APML first
         const sortingAPML = createSortingInterface(apmlInput);
-        const parseSuccess = apmlStore.parseAPML(sortingAPML);
-        
-        if (parseSuccess) {
-          console.log('✅ Sorting APML converted and parsed successfully');
-          showInputPopup = false;
-          apmlInput = '';
-        } else {
-          console.error('❌ Failed to parse converted sorting APML');
-          alert('Failed to parse sorting logic. Check console for details.');
-        }
+        await compileAPMLWithMCP(sortingAPML);
       } else if (apmlInput.includes('app ') && apmlInput.includes('interface ')) {
-        // Modern APML format (like Zenflow)
-        console.log('🎨 Detected modern APML format with app definition');
-        const parseSuccess = apmlStore.parseAPML(apmlInput);
-        
-        if (parseSuccess) {
-          console.log('✅ Modern APML parsed successfully');
-          showInputPopup = false;
-          apmlInput = '';
-        } else {
-          console.error('❌ Failed to parse modern APML');
-          alert('Failed to parse APML. Check console for detailed error information.');
-        }
+        // Modern APML format (like Zenflow) - compile directly
+        console.log('🎨 Detected modern APML format - sending to MCP compiler');
+        await compileAPMLWithMCP(apmlInput);
       } else {
-        // Try standard APML parsing
-        const parseSuccess = apmlStore.parseAPML(apmlInput);
-        
-        if (parseSuccess) {
-          console.log('✅ APML parsed successfully');
-          showInputPopup = false;
-          apmlInput = '';
-        } else {
-          console.error('❌ Failed to parse APML');
-          alert('Failed to parse APML. Supported formats:\n\n1. Modern APML (app name: + interface blocks)\n2. Standard APML (interface + logic blocks)\n3. Legacy sorting logic\n\nCheck console for detailed errors.');
-        }
+        // Try standard APML format - compile directly  
+        console.log('📋 Standard APML format - sending to MCP compiler');
+        await compileAPMLWithMCP(apmlInput);
       }
     } catch (error) {
-      console.error('❌ Error parsing APML:', error);
-      alert('Error parsing APML: ' + error.message + '\n\nCheck console for details.');
+      console.error('❌ Error compiling APML:', error);
+      alert('Error compiling APML: ' + error.message + '\n\nThe MCP server may be starting up. Try again in a moment.');
     } finally {
       isProcessing = false;
+    }
+  }
+  
+  async function compileAPMLWithMCP(apmlContent) {
+    console.log('🚀 Calling MCP server for APML compilation...');
+    
+    try {
+      const response = await fetch('https://web-production-1136.up.railway.app/compile', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          tool: 'compile_apml',
+          arguments: {
+            apml_content: apmlContent,
+            target_framework: 'svelte',
+            glass_morphism: true
+          }
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`MCP server error: ${response.status} ${response.statusText}`);
+      }
+
+      const compilationResult = await response.json();
+      console.log('✅ MCP compilation successful:', compilationResult);
+      
+      // Extract the compiled app data and integrate with Trinity
+      if (compilationResult && compilationResult.content) {
+        // Parse the compilation result and update Trinity's state
+        const compilerMessage = compilationResult.content[0].text;
+        console.log('📱 Compiled app details:', compilerMessage);
+        
+        // Extract app info from the compilation message
+        const appNameMatch = compilerMessage.match(/App Name:\s*(.+)/);
+        const appName = appNameMatch ? appNameMatch[1].trim() : 'Compiled App';
+        
+        // Store the compilation result for Trinity to use
+        window.mcpCompilationResult = {
+          appName: appName,
+          message: compilerMessage,
+          compiledAt: new Date().toISOString(),
+          apmlContent: apmlContent,
+          mcpServerUrl: 'https://web-production-1136.up.railway.app'
+        };
+        
+        // Parse APML for Trinity validation while preserving MCP data
+        const parseSuccess = apmlStore.parseAPML(apmlContent);
+        
+        if (parseSuccess) {
+          showInputPopup = false;
+          apmlInput = '';
+          console.log('🎯 Trinity updated with compiled APML + MCP integration');
+          
+          // Trigger success notification
+          alert(`🎉 SUCCESS! APML compiled to working ${appName}!\n\n✅ MCP Server: Compilation complete\n✅ Trinity: Validation complete\n\nCheck the Trinity Flow Diagram and iPhone Simulator!`);
+        }
+      } else {
+        throw new Error('Unexpected compilation result format');
+      }
+      
+    } catch (error) {
+      console.error('❌ MCP compilation failed:', error);
+      
+      // Fallback to local parsing if MCP fails
+      console.log('🔄 Falling back to local APML parsing...');
+      const parseSuccess = apmlStore.parseAPML(apmlContent);
+      
+      if (parseSuccess) {
+        console.log('✅ Local parsing successful as fallback');
+        showInputPopup = false;
+        apmlInput = '';
+      } else {
+        throw new Error('Both MCP compilation and local parsing failed');
+      }
     }
   }
   

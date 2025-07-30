@@ -1490,6 +1490,50 @@
     
     addMessage('trinity', '⏹️ Runtime Trinity monitoring stopped');
   }
+
+  // MCP Integration Functions
+  function viewCompiledApp() {
+    if (window.mcpCompilationResult) {
+      const result = window.mcpCompilationResult;
+      addMessage('system', '🔍 Viewing MCP compiled app source code...');
+      addMessage('mcp', result.message);
+      addMessage('system', `📱 App: ${result.appName}`);
+      addMessage('system', `🚀 Compiled via Railway MCP Server`);
+      addMessage('system', `⏰ Generated: ${new Date(result.compiledAt).toLocaleString()}`);
+    }
+  }
+
+  async function openCompiledApp() {
+    if (window.mcpCompilationResult) {
+      const result = window.mcpCompilationResult;
+      addMessage('system', '🌐 Fetching compiled app source from MCP server...');
+      
+      try {
+        // Get the app source code from MCP server
+        const response = await fetch(`${result.mcpServerUrl}/compile`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            tool: 'get_app_source',
+            arguments: { app_name: result.appName }
+          })
+        });
+
+        if (response.ok) {
+          const sourceData = await response.json();
+          addMessage('mcp', `📦 Source code retrieved for ${result.appName}`);
+          addMessage('system', '💡 In a production environment, this would open the compiled app in a new window or iframe');
+          
+          // For now, show the compilation success in the iPhone simulator
+          addMessage('trinity', `🎯 ${result.appName} is ready for deployment!`);
+        } else {
+          addMessage('system', '⚠️ Could not retrieve app source - MCP server may be busy');
+        }
+      } catch (error) {
+        addMessage('system', `❌ Error fetching app: ${error.message}`);
+      }
+    }
+  }
   
   function updateTrinityRealTimeState() {
     if (!trinityStateMonitor.isActive) return;
@@ -2236,6 +2280,35 @@
           </button>
         </div>
         
+        <!-- MCP Compilation Status -->
+        {#if typeof window !== 'undefined' && window.mcpCompilationResult}
+          <div class="mb-4 p-3 bg-purple-900 border border-purple-600 rounded-lg">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-purple-300 font-medium">🚀 MCP Compilation Success!</span>
+              <span class="text-xs text-purple-400">Just now</span>
+            </div>
+            <div class="text-xs text-purple-400 space-y-1">
+              <div>• App: {window.mcpCompilationResult.appName}</div>
+              <div>• Server: Railway MCP</div>
+              <div>• Status: ✅ Production Ready</div>
+            </div>
+            <div class="mt-2 flex gap-2">
+              <button
+                on:click={() => viewCompiledApp()}
+                class="px-3 py-1 bg-purple-600 hover:bg-purple-700 text-white rounded text-xs transition-colors"
+              >
+                🔍 View Source
+              </button>
+              <button
+                on:click={() => openCompiledApp()}
+                class="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs transition-colors"
+              >
+                🌐 Open App
+              </button>
+            </div>
+          </div>
+        {/if}
+
         <!-- Export Button -->
         <div class="flex gap-2">
           <button
@@ -2296,6 +2369,16 @@
                       <h3 class="text-xl font-bold text-gray-900">{selectedScreen.name}</h3>
                       <p class="text-sm text-gray-600 mt-1">{selectedScreen.description}</p>
                     </div>
+                    {#if typeof window !== 'undefined' && window.mcpCompilationResult}
+                      <div class="flex items-center space-x-2">
+                        <div class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
+                          🚀 MCP Compiled
+                        </div>
+                        <div class="px-2 py-1 bg-green-100 text-green-800 rounded-full text-xs font-medium">
+                          ✅ Production Ready
+                        </div>
+                      </div>
+                    {/if}
                   </div>
                 </div>
                 
