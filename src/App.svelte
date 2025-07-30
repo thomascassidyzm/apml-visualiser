@@ -87,12 +87,20 @@
           mcpServerUrl: 'https://web-production-1136.up.railway.app'
         };
         
-        // Show real app in simulator and extract flow nodes from compiled code
+        // Force Trinity to refresh with the newly compiled app
+        const parseSuccess = apmlStore.parseAPML(apmlContent);
+        
+        if (parseSuccess) {
+          // Force refresh the iPhone simulator
+          setTimeout(() => {
+            window.dispatchEvent(new CustomEvent('apml-updated'));
+          }, 500);
+        }
+        
         showInputPopup = false;
         apmlInput = '';
         
-        // Trinity will show the real app running + extract flow from the code
-        console.log(`🎉 SUCCESS! Real app built: ${appName} - Running in iPhone simulator!`);
+        console.log(`🎉 SUCCESS! Real app built: ${appName} - Now showing in iPhone simulator!`);
       } else {
         throw new Error('Unexpected compilation result format');
       }
