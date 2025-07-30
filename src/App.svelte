@@ -47,7 +47,7 @@
       }
     } catch (error) {
       console.error('❌ Error compiling APML:', error);
-      alert('Error compiling APML: ' + error.message + '\n\nThe MCP server may be starting up. Try again in a moment.');
+      console.error('Error compiling APML:', error.message);
     } finally {
       isProcessing = false;
     }
@@ -106,8 +106,8 @@
           apmlInput = '';
           console.log('🎯 Trinity updated with compiled APML + MCP integration');
           
-          // Trigger success notification
-          alert(`🎉 SUCCESS! APML compiled to working ${appName}!\n\n✅ MCP Server: Compilation complete\n✅ Trinity: Validation complete\n\nCheck the Trinity Flow Diagram and iPhone Simulator!`);
+          // Trinity will automatically show the compilation results in the UI
+          console.log(`🎉 SUCCESS! APML compiled to working ${appName}!`);
         }
       } else {
         throw new Error('Unexpected compilation result format');

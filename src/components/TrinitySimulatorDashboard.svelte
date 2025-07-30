@@ -18,6 +18,7 @@
   let availableApmlFiles = [];
   let showFileSelector = false;
   let mermaidLoaded = false;
+  let mcpCompilationStatus = null;
   let activeTransition = null; // Track active transition for animation
   let transitionHistory = []; // Track recent transitions
   let screenSnapshots = []; // Store screen snapshots for pixel change detection
@@ -60,7 +61,21 @@
     connectWebSocket();
     initializeSimulator();
     loadMermaid();
+    checkMCPCompilationStatus();
+    
+    // Check for MCP updates every 2 seconds
+    const mcpStatusInterval = setInterval(checkMCPCompilationStatus, 2000);
+    
+    return () => {
+      clearInterval(mcpStatusInterval);
+    };
   });
+  
+  function checkMCPCompilationStatus() {
+    if (typeof window !== 'undefined' && window.mcpCompilationResult) {
+      mcpCompilationStatus = window.mcpCompilationResult;
+    }
+  }
   
   async function loadMermaid() {
     try {
@@ -1493,8 +1508,8 @@
 
   // MCP Integration Functions
   function viewCompiledApp() {
-    if (window.mcpCompilationResult) {
-      const result = window.mcpCompilationResult;
+    if (mcpCompilationStatus) {
+      const result = mcpCompilationStatus;
       addMessage('system', '🔍 Viewing MCP compiled app source code...');
       addMessage('mcp', result.message);
       addMessage('system', `📱 App: ${result.appName}`);
@@ -1504,8 +1519,8 @@
   }
 
   async function openCompiledApp() {
-    if (window.mcpCompilationResult) {
-      const result = window.mcpCompilationResult;
+    if (mcpCompilationStatus) {
+      const result = mcpCompilationStatus;
       addMessage('system', '🌐 Fetching compiled app source from MCP server...');
       
       try {
@@ -2281,14 +2296,14 @@
         </div>
         
         <!-- MCP Compilation Status -->
-        {#if typeof window !== 'undefined' && window.mcpCompilationResult}
+        {#if mcpCompilationStatus}
           <div class="mb-4 p-3 bg-purple-900 border border-purple-600 rounded-lg">
             <div class="flex items-center justify-between mb-2">
               <span class="text-purple-300 font-medium">🚀 MCP Compilation Success!</span>
               <span class="text-xs text-purple-400">Just now</span>
             </div>
             <div class="text-xs text-purple-400 space-y-1">
-              <div>• App: {window.mcpCompilationResult.appName}</div>
+              <div>• App: {mcpCompilationStatus.appName}</div>
               <div>• Server: Railway MCP</div>
               <div>• Status: ✅ Production Ready</div>
             </div>
@@ -2369,7 +2384,7 @@
                       <h3 class="text-xl font-bold text-gray-900">{selectedScreen.name}</h3>
                       <p class="text-sm text-gray-600 mt-1">{selectedScreen.description}</p>
                     </div>
-                    {#if typeof window !== 'undefined' && window.mcpCompilationResult}
+                    {#if mcpCompilationStatus}
                       <div class="flex items-center space-x-2">
                         <div class="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-medium">
                           🚀 MCP Compiled
