@@ -19,6 +19,7 @@
   let showFileSelector = false;
   let mermaidLoaded = false;
   let mcpCompilationStatus = null;
+  let compiledAppUrl = null;
   let activeTransition = null; // Track active transition for animation
   let transitionHistory = []; // Track recent transitions
   let screenSnapshots = []; // Store screen snapshots for pixel change detection
@@ -74,6 +75,14 @@
   function checkMCPCompilationStatus() {
     if (typeof window !== 'undefined' && window.mcpCompilationResult) {
       mcpCompilationStatus = window.mcpCompilationResult;
+      
+      // Extract the compiled app URL from MCP result
+      if (mcpCompilationStatus.message && mcpCompilationStatus.message.includes('Output Path:')) {
+        // For now, we'll need the MCP server to serve the compiled apps
+        // TODO: Get actual URL from MCP server
+        compiledAppUrl = `${mcpCompilationStatus.mcpServerUrl}/app/${mcpCompilationStatus.appName}`;
+        console.log('📱 Compiled app URL:', compiledAppUrl);
+      }
     }
   }
   
@@ -2397,10 +2406,36 @@
                   </div>
                 </div>
                 
-                <!-- Dynamic Screen Content -->
-                <div class="flex-1 flex flex-col bg-gray-50">
-                  <!-- Main Content Area - Scrollable -->
-                  <div class="flex-1 p-6 overflow-y-auto">
+                <!-- Real App Content -->
+                <div class="flex-1 flex flex-col bg-white">
+                  {#if compiledAppUrl}
+                    <!-- Real Compiled App in iframe -->
+                    <iframe 
+                      src={compiledAppUrl}
+                      class="flex-1 w-full border-0"
+                      sandbox="allow-scripts allow-same-origin allow-forms allow-popups"
+                      title="Compiled APML Application"
+                      on:load={() => console.log('📱 Real app loaded in iPhone simulator')}
+                    ></iframe>
+                    
+                    <!-- App Controls -->
+                    <div class="flex items-center justify-center p-2 bg-gray-100 border-t">
+                      <button 
+                        on:click={() => window.location.reload()}
+                        class="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600 mr-2"
+                      >
+                        ↻ Reload
+                      </button>
+                      <button 
+                        on:click={() => window.open(compiledAppUrl, '_blank')}
+                        class="px-3 py-1 text-xs bg-green-500 text-white rounded hover:bg-green-600"
+                      >
+                        ⛶ Open Full
+                      </button>
+                    </div>
+                  {:else}
+                    <!-- Fallback to mock content when no compiled app -->
+                    <div class="flex-1 p-6 overflow-y-auto bg-gray-50">
                     {#if selectedScreen.layout === 'chat'}
                       <!-- Chat Layout with Beautiful Design -->
                       <div class="h-full flex flex-col">
@@ -2466,10 +2501,12 @@
                         </div>
                       </div>
                     {/if}
-                  </div>
+                    </div>
+                  {/if}
                   
-                  <!-- Action Buttons - Fixed at Bottom, Always Visible -->
-                  <div class="border-t border-gray-200 bg-white p-4 space-y-2 max-h-40 overflow-y-auto">
+                  {#if !compiledAppUrl}
+                    <!-- Action Buttons - Only show for mock content -->
+                    <div class="border-t border-gray-200 bg-white p-4 space-y-2 max-h-40 overflow-y-auto">
                     {#each selectedScreen.actions as action (action.id)}
                       <button
                         on:click={() => handleAction(action)}
@@ -2481,7 +2518,8 @@
                         {/if}
                       </button>
                     {/each}
-                  </div>
+                    </div>
+                  {/if}
                 </div>
                 
                 <!-- Bottom Navigation -->
