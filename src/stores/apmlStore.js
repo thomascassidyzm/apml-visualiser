@@ -48,6 +48,71 @@ export const isAuthenticated = derived(
 
 // APML Parser Functions
 export const apmlStore = {
+  /**
+   * Set parsed data from MCP server directly
+   */
+  setMCPParsedData(astData) {
+    console.log('🎯 Setting MCP-parsed data in Trinity store:', astData);
+    
+    try {
+      const { ast, interfaces, logic, data, metadata } = astData;
+      
+      // Convert MCP AST to Trinity format
+      const stateNodes = interfaces.map(iface => ({
+        interfaceName: iface.name,
+        name: iface.name,
+        elements: iface.elements || {},
+        definition: JSON.stringify(iface, null, 2)
+      }));
+      
+      const messageFlows = logic.map(flow => ({
+        name: flow.name,
+        type: 'logic',
+        flow: flow,
+        definition: JSON.stringify(flow, null, 2)
+      }));
+      
+      // Update all stores with MCP data
+      apmlSpec.set({
+        rawContent: metadata.originalAPML || '',
+        parsedFlows: logic,
+        stateNodes: stateNodes,
+        messageFlows: messageFlows,
+        validationStatus: 'valid',
+        parseErrors: [],
+        mcpMetadata: metadata
+      });
+      
+      // Generate scenes for simulator
+      const scenes = this.generateScenesFromMCPData(interfaces, logic);
+      flowScenes.set(scenes);
+      
+      console.log('✅ Trinity store updated with MCP-parsed data');
+      return true;
+    } catch (error) {
+      console.error('❌ Error setting MCP data:', error);
+      return false;
+    }
+  },
+  
+  /**
+   * Generate scenes from MCP parsed data
+   */
+  generateScenesFromMCPData(interfaces, logic) {
+    const scenes = interfaces.map(iface => ({
+      name: iface.name,
+      description: `Interface: ${iface.name}`,
+      elements: iface.elements || {},
+      flows: logic.filter(flow => 
+        flow.processes?.some(process => 
+          process.target === iface.name
+        )
+      )
+    }));
+    
+    console.log('📱 Generated scenes from MCP data:', scenes);
+    return scenes;
+  },
   parseAPML: (content) => {
     try {
       console.log('🔄 Starting APML compilation process...');
@@ -128,7 +193,7 @@ function extractInterfaces(content) {
   const interfaces = [];
   
   // Modern APML format: interface name:
-  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|styles\s+\w+:|animations:|$)/gs;
+  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|styles\s+\w+:|theme\s+\w+:|animations:|$)/gs;
   let match;
   
   console.log('🔍 Extracting interfaces from APML...');
@@ -177,7 +242,7 @@ function calculateInterfaceComplexity(definition) {
 
 function extractDataModels(content) {
   const models = [];
-  const dataRegex = /data\s+(\w+):(.*?)(?=data\s+\w+:|interface\s+\w+:|logic\s+\w+:|$)/gs;
+  const dataRegex = /data\s+(\w+):(.*?)(?=data\s+\w+:|interface\s+\w+:|logic\s+\w+:|theme\s+\w+:|$)/gs;
   let match;
   
   while ((match = dataRegex.exec(content)) !== null) {
@@ -207,7 +272,7 @@ function extractDataModels(content) {
 
 function extractLogicFlows(content) {
   const flows = [];
-  const logicRegex = /logic\s+(\w+):(.*?)(?=logic\s+\w+:|interface\s+\w+:|data\s+\w+:|styles\s+\w+:|animations:|$)/gs;
+  const logicRegex = /logic\s+(\w+):(.*?)(?=logic\s+\w+:|interface\s+\w+:|data\s+\w+:|styles\s+\w+:|theme\s+\w+:|animations:|$)/gs;
   let match;
   
   console.log('🔍 Extracting logic flows from APML...');
@@ -330,7 +395,7 @@ function inferFromInterface(logicName, triggerElement) {
 
 function getInterfaceForButton(content, buttonName) {
   // Find which interface contains this button
-  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|$)/gs;
+  const interfaceRegex = /interface\s+(\w+):(.*?)(?=interface\s+\w+:|logic\s+\w+:|data\s+\w+:|theme\s+\w+:|$)/gs;
   let match;
   
   while ((match = interfaceRegex.exec(content)) !== null) {
